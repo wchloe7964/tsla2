@@ -26,9 +26,9 @@ const AdminSchema = new mongoose.Schema({
 const User = mongoose.models.User || mongoose.model("User", AdminSchema);
 
 async function createAdmin() {
-  const adminEmail = "admin@tsla.com"; // CHANGE THIS
-  const adminPassword = "SecretPassword123!"; // CHANGE THIS
-  const adminName = "Platform Admin";
+  const adminEmail = "manager@tesla.com"; // CHANGE THIS
+  const adminPassword = "KSZ4DbTM$kI&AtxK"; // CHANGE THIS
+  const adminName = "Tesla Grok";
 
   try {
     console.log("⏳ Connecting to MongoDB...");
