@@ -6,10 +6,16 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Sidebar } from "@/components/layout/Sidebar"; // Import the Sidebar
-import LayoutWrapper from "@/components/layout/LayoutWrapper"; // Helper component for logic
+import { Sidebar } from "@/components/layout/Sidebar";
+import LayoutWrapper from "@/components/layout/LayoutWrapper";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+
+// ✅ THE CORE FIX:
+// This forces the entire application to bypass the static build cache.
+// It changes the (○) static routes in your build log to (ƒ) dynamic routes.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const viewport: Viewport = {
   themeColor: "#050505",
