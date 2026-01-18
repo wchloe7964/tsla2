@@ -24,7 +24,7 @@ const nextConfig = {
     // This ensures that clicking "back" or clicking a link doesn't show old data.
     staleTimes: {
       dynamic: 0,
-      static: 0,
+      static: 30,
     },
   },
 

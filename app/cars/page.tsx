@@ -8,7 +8,6 @@ import CarCard from "@/components/cars/CarCard";
 
 // ✅ FORCE FRESHNESS: Tell Next.js to never cache this route at build time
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 export default function InventoryPage() {
   return (
