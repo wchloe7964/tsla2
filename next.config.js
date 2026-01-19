@@ -42,7 +42,7 @@ const nextConfig = {
   // 3. SELECTIVE Cache-Control Headers (NOT global no-store!)
   async headers() {
     return [
-      // Only disable cache for admin/user pages that need fresh data
+      // Only disable cache for admin/user pages that need freshdata
       {
         source: "/admin/:path*",
         headers: [
