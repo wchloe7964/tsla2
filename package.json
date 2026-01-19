@@ -7,9 +7,6 @@
     "build": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "start": "next start",
     "lint": "next lint",
-    "admin": "tsx scripts/make-admin.ts",
-    "seed:admin": "node scripts/seed-admin.js",
-    "seed:admin:ts": "ts-node scripts/seed-admin.ts",
     "mongo:start": "brew services start mongodb-community",
     "mongo:stop": "brew services stop mongodb-community",
     "mongo:status": "brew services list | grep mongo"
