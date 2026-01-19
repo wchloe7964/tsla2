@@ -18,13 +18,14 @@ import {
 import MobileMenu from "./MobileMenu";
 import ThemeToggle from "../ThemeToggle";
 import { useAuth } from "@/context/AuthContext";
+import { apiClient } from "@/lib/api/client";
 
 const Header = () => {
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const { user, loading, logout, token } = useAuth();
+  const { user, loading, logout } = useAuth();
 
   useEffect(() => {
     setMounted(true);
@@ -37,49 +38,22 @@ const Header = () => {
       }
 
       try {
-        const headers: HeadersInit = {
-          "Content-Type": "application/json",
-        };
+        // Use apiClient for authenticated request
+        const response = await apiClient.getAdminSettings();
 
-        // Add authorization if token exists
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-
-        const res = await fetch("/api/admin/settings", {
-          headers,
-          credentials: "include", // For session cookies
-        });
-
-        // If unauthorized, don't show error - just skip
-        if (res.status === 401 || res.status === 403) {
-          return;
-        }
-
-        if (!res.ok) {
-          return;
-        }
-
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          try {
-            const data = await res.json();
-            if (data.success && data.settings?.systemNotice) {
-              setNotice(data.settings.systemNotice);
-            }
-          } catch (parseError) {
-            console.warn("Failed to parse settings response");
-          }
+        if (response.success && response.settings?.systemNotice) {
+          setNotice(response.settings.systemNotice);
         }
       } catch (err) {
         // Silently fail - this is normal for non-admin users
+        console.debug("Settings fetch failed (likely not admin):", err);
       }
     };
 
     fetchSettings();
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [user, token]); // Re-fetch when user or token changes
+  }, [user]); // Re-fetch when user changes
 
   const navigation = [
     { name: "Inventory", href: "/cars" },
@@ -88,31 +62,9 @@ const Header = () => {
     { name: "Portfolio", href: "/portfolio" },
   ];
 
-  // Check if logo exists
+  // Logo handling
   const [logoError, setLogoError] = useState(false);
   const logoPath = "/hhb7Yj6zdj7QzEXWiKRVvkjJznru8eGnB5wKm2Ue.svg";
-
-  // Try alternative logo paths if main one fails
-  const alternativeLogos = [
-    "/logo.svg",
-    "/logo.png",
-    "/images/logo.svg",
-    "/assets/logo.svg",
-  ];
-
-  const [currentLogoIndex, setCurrentLogoIndex] = useState(0);
-  const currentLogoPath =
-    logoError && currentLogoIndex < alternativeLogos.length
-      ? alternativeLogos[currentLogoIndex]
-      : logoPath;
-
-  const handleLogoError = () => {
-    if (currentLogoIndex < alternativeLogos.length) {
-      setCurrentLogoIndex((prev) => prev + 1);
-    } else {
-      setLogoError(true);
-    }
-  };
 
   if (!mounted) {
     return (
@@ -145,9 +97,9 @@ const Header = () => {
         }`}>
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="flex justify-between items-center">
-            {/* Logo with error handling */}
+            {/* Logo */}
             <Link href="/" className="group flex items-center">
-              {logoError && currentLogoIndex >= alternativeLogos.length ? (
+              {logoError ? (
                 <div className="h-8 w-32 bg-gradient-to-r from-black to-gray-800 dark:from-white dark:to-gray-200 flex items-center justify-center rounded-lg">
                   <span className="text-xs font-bold text-white dark:text-black tracking-widest">
                     LOGO
@@ -155,13 +107,13 @@ const Header = () => {
                 </div>
               ) : (
                 <NextImage
-                  src={currentLogoPath}
+                  src={logoPath}
                   alt="Logo"
                   width={120}
                   height={32}
                   priority
                   className="h-8 w-auto dark:invert transition-transform duration-500 group-hover:scale-105"
-                  onError={handleLogoError}
+                  onError={() => setLogoError(true)}
                 />
               )}
             </Link>

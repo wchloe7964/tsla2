@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { 
-  ArrowLeft, 
-  CheckCircle, 
-  CreditCard, 
+import { useState, useEffect } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import {
+  ArrowLeft,
+  CheckCircle,
+  CreditCard,
   Shield,
   Truck,
   Calendar,
@@ -17,121 +17,127 @@ import {
   Home,
   DollarSign,
   Clock,
-  ChevronRight
-} from 'lucide-react'
-import Link from 'next/link'
+  ChevronRight,
+} from "lucide-react";
+import Link from "next/link";
 
 interface Car {
-  _id: string
-  name: string
-  model: string
-  year: number
-  price: number
-  image: string
-  description: string
-  available: boolean
+  _id: string;
+  name: string;
+  model: string;
+  year: number;
+  price: number;
+  image: string;
+  description: string;
+  available: boolean;
 }
 
 interface FormData {
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  address: string
-  city: string
-  state: string
-  zipCode: string
-  country: string
-  paymentMethod: 'credit_card' | 'bank_transfer' | 'financing'
-  color: string
-  termsAccepted: boolean
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  paymentMethod: "credit_card" | "bank_transfer" | "financing";
+  color: string;
+  termsAccepted: boolean;
 }
 
 export default function OrderPage() {
-  const { id } = useParams()
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [car, setCar] = useState<Car | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const { id } = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [car, setCar] = useState<Car | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState<FormData>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: 'US',
-    paymentMethod: 'credit_card',
-    color: searchParams.get('color') || 'Pearl White',
-    termsAccepted: false
-  })
-  const [processing, setProcessing] = useState(false)
-  const [orderComplete, setOrderComplete] = useState(false)
-  const [orderId, setOrderId] = useState('')
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "US",
+    paymentMethod: "credit_card",
+    color: searchParams.get("color") || "Pearl White",
+    termsAccepted: false,
+  });
+  const [processing, setProcessing] = useState(false);
+  const [orderComplete, setOrderComplete] = useState(false);
+  const [orderId, setOrderId] = useState("");
 
   useEffect(() => {
-    fetchCarDetails()
-  }, [id])
+    fetchCarDetails();
+  }, [id]);
 
   const fetchCarDetails = async () => {
     try {
-      setLoading(true)
-      const response = await fetch(`/api/cars/${id}`)
-      const data = await response.json()
-      
+      setLoading(true);
+      const response = await fetch(`/api/cars/${id}`);
+      const data = await response.json();
+
       if (data.success) {
-        setCar(data.car)
+        setCar(data.car);
       } else {
-        throw new Error(data.error || 'Failed to fetch car details')
+        throw new Error(data.error || "Failed to fetch car details");
       }
     } catch (error: any) {
-      console.error('Failed to fetch car:', error)
-      setError('Failed to fetch car details. Please try again.')
+      console.error("Failed to fetch car:", error);
+      setError("Failed to fetch car details. Please try again.");
       // Fallback to mock data
       setCar({
         _id: id as string,
-        name: 'Tesla Model 3',
-        model: 'Model 3',
+        name: "Tesla Model 3",
+        model: "Model 3",
         year: 2024,
         price: 45000,
-        image: 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=800&q=80',
-        description: 'Electric sedan with autopilot',
-        available: true
-      })
+        image:
+          "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=800&q=80",
+        description: "Electric sedan with autopilot",
+        available: true,
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target
-    setFormData(prev => ({
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
+  ) => {
+    const { name, value, type } = e.target;
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    }))
-  }
+      [name]:
+        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+    e.preventDefault();
+
     // Validate form
     if (!formData.termsAccepted) {
-      alert('Please accept the terms and conditions')
-      return
+      alert("Please accept the terms and conditions");
+      return;
     }
 
-    setProcessing(true)
-    setError('')
+    setProcessing(true);
+    setError("");
 
     try {
       // Create order
-      const response = await fetch('/api/orders', {
-        method: 'POST',
+      const response = await fetch("/api/orders", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           carId: id,
@@ -145,65 +151,66 @@ export default function OrderPage() {
             city: formData.city,
             state: formData.state,
             zipCode: formData.zipCode,
-            country: formData.country
+            country: formData.country,
           },
           paymentMethod: formData.paymentMethod,
           color: formData.color,
-          totalAmount: calculateTotal()
-        })
-      })
+          totalAmount: calculateTotal(),
+        }),
+      });
 
-      const data = await response.json()
-      
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create order')
+        throw new Error(data.error || "Failed to create order");
       }
 
-      setOrderId(data.orderId)
-      setOrderComplete(true)
-      
+      setOrderId(data.orderId);
+      setOrderComplete(true);
+
       // Redirect to success page after 3 seconds
       setTimeout(() => {
-        router.push(`/cars/${id}/order/success?orderId=${data.orderId}`)
-      }, 3000)
-
+        router.push(`/cars/${id}/order/success?orderId=${data.orderId}`);
+      }, 3000);
     } catch (error: any) {
-      console.error('Order error:', error)
-      setError(error.message || 'Failed to process order. Please try again.')
+      console.error("Order error:", error);
+      setError(error.message || "Failed to process order. Please try again.");
     } finally {
-      setProcessing(false)
+      setProcessing(false);
     }
-  }
+  };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(price)
-  }
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
 
   const calculateTax = () => {
-    const basePrice = car?.price || 0
-    return basePrice * 0.08 // 8% tax
-  }
+    const basePrice = car?.price || 0;
+    return basePrice * 0.08; // 8% tax
+  };
 
   const calculateTotal = () => {
-    const basePrice = car?.price || 0
-    const tax = calculateTax()
-    return basePrice + tax
-  }
+    const basePrice = car?.price || 0;
+    const tax = calculateTax();
+    return basePrice + tax;
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-tesla-gray-50 to-white dark:from-tesla-gray-900 dark:to-tesla-gray-800 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-tesla-blue mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-tesla-gray-400">Loading order details...</p>
+          <p className="text-gray-600 dark:text-tesla-gray-400">
+            Loading order details...
+          </p>
         </div>
       </div>
-    )
+    );
   }
 
   if (orderComplete) {
@@ -226,7 +233,7 @@ export default function OrderPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error && !car) {
@@ -239,27 +246,25 @@ export default function OrderPage() {
             </h2>
             <Link
               href={`/cars/${id}`}
-              className="inline-flex items-center text-tesla-blue hover:underline"
-            >
+              className="inline-flex items-center text-tesla-blue hover:underline">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Car Details
             </Link>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
-  const totalPrice = calculateTotal()
-  const taxAmount = calculateTax()
+  const totalPrice = calculateTotal();
+  const taxAmount = calculateTax();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-tesla-gray-50 to-white dark:from-tesla-gray-900 dark:to-tesla-gray-800 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link
           href={`/cars/${id}`}
-          className="inline-flex items-center text-sm text-gray-600 dark:text-tesla-gray-400 hover:text-gray-900 dark:hover:text-white mb-8 transition-colors duration-200"
-        >
+          className="inline-flex items-center text-sm text-gray-600 dark:text-tesla-gray-400 hover:text-gray-900 dark:hover:text-white mb-8 transition-colors duration-200">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Car Details
         </Link>
@@ -271,7 +276,7 @@ export default function OrderPage() {
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
                 Order Summary
               </h2>
-              
+
               <div className="flex items-start gap-4 mb-6">
                 <div className="w-32 h-24 rounded-lg overflow-hidden flex-shrink-0">
                   <img
@@ -289,13 +294,19 @@ export default function OrderPage() {
                   </p>
                   {formData.color && (
                     <div className="flex items-center gap-2 mt-2">
-                      <div 
+                      <div
                         className="w-4 h-4 rounded-full border border-gray-300 dark:border-tesla-gray-600"
-                        style={{ 
-                          backgroundColor: formData.color === 'Solid Black' ? '#000000' : 
-                                        formData.color === 'Midnight Silver' ? '#5F5F5F' :
-                                        formData.color === 'Deep Blue' ? '#1E40AF' :
-                                        formData.color === 'Red Multi-Coat' ? '#DC2626' : '#FFFFFF'
+                        style={{
+                          backgroundColor:
+                            formData.color === "Solid Black"
+                              ? "#000000"
+                              : formData.color === "Midnight Silver"
+                                ? "#5F5F5F"
+                                : formData.color === "Deep Blue"
+                                  ? "#1E40AF"
+                                  : formData.color === "Red Multi-Coat"
+                                    ? "#DC2626"
+                                    : "#FFFFFF",
                         }}
                       />
                       <span className="text-sm text-gray-600 dark:text-tesla-gray-400">
@@ -308,23 +319,33 @@ export default function OrderPage() {
 
               <div className="space-y-4 border-t border-gray-200 dark:border-tesla-gray-700 pt-6">
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-tesla-gray-400">Vehicle Price</span>
+                  <span className="text-gray-600 dark:text-tesla-gray-400">
+                    Vehicle Price
+                  </span>
                   <span className="font-medium text-gray-900 dark:text-white">
                     {formatPrice(car?.price || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-tesla-gray-400">Delivery Fee</span>
-                  <span className="font-medium text-green-600 dark:text-green-400">FREE</span>
+                  <span className="text-gray-600 dark:text-tesla-gray-400">
+                    Delivery Fee
+                  </span>
+                  <span className="font-medium text-green-600 dark:text-green-400">
+                    FREE
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-tesla-gray-400">Taxes & Fees</span>
+                  <span className="text-gray-600 dark:text-tesla-gray-400">
+                    Taxes & Fees
+                  </span>
                   <span className="font-medium text-gray-900 dark:text-white">
                     {formatPrice(taxAmount)}
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-gray-200 dark:border-tesla-gray-700 pt-4">
-                  <span className="text-lg font-semibold text-gray-900 dark:text-white">Total</span>
+                  <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Total
+                  </span>
                   <span className="text-2xl font-bold text-gray-900 dark:text-white">
                     {formatPrice(totalPrice)}
                   </span>
@@ -342,7 +363,7 @@ export default function OrderPage() {
                     Contact Information
                   </span>
                 </h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-tesla-gray-300 mb-2">
@@ -410,7 +431,7 @@ export default function OrderPage() {
                     Delivery Address
                   </span>
                 </h3>
-                
+
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-tesla-gray-300 mb-2">
@@ -477,8 +498,7 @@ export default function OrderPage() {
                       value={formData.country}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-tesla-gray-600 rounded-lg focus:ring-2 focus:ring-tesla-blue focus:border-transparent transition-colors duration-200 bg-white dark:bg-tesla-gray-900 text-gray-900 dark:text-white"
-                    >
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-tesla-gray-600 rounded-lg focus:ring-2 focus:ring-tesla-blue focus:border-transparent transition-colors duration-200 bg-white dark:bg-tesla-gray-900 text-gray-900 dark:text-white">
                       <option value="US">United States</option>
                       <option value="CA">Canada</option>
                       <option value="UK">United Kingdom</option>
@@ -497,78 +517,95 @@ export default function OrderPage() {
                     Payment Method
                   </span>
                 </h3>
-                
+
                 <div className="space-y-4">
-                  <div className={`flex items-center gap-3 p-4 border rounded-lg transition-all duration-200 ${
-                    formData.paymentMethod === 'credit_card' 
-                      ? 'border-tesla-blue bg-blue-50 dark:bg-tesla-blue/10' 
-                      : 'border-gray-300 dark:border-tesla-gray-600 hover:border-tesla-blue'
-                  }`}>
+                  <div
+                    className={`flex items-center gap-3 p-4 border rounded-lg transition-all duration-200 ${
+                      formData.paymentMethod === "credit_card"
+                        ? "border-tesla-blue bg-blue-50 dark:bg-tesla-blue/10"
+                        : "border-gray-300 dark:border-tesla-gray-600 hover:border-tesla-blue"
+                    }`}>
                     <input
                       type="radio"
                       id="credit_card"
                       name="paymentMethod"
                       value="credit_card"
-                      checked={formData.paymentMethod === 'credit_card'}
+                      checked={formData.paymentMethod === "credit_card"}
                       onChange={handleChange}
                       className="w-4 h-4 text-tesla-blue"
                     />
-                    <label htmlFor="credit_card" className="flex-1 cursor-pointer">
+                    <label
+                      htmlFor="credit_card"
+                      className="flex-1 cursor-pointer">
                       <div className="flex items-center gap-2">
                         <CreditCard className="w-5 h-5" />
-                        <span className="font-medium text-gray-900 dark:text-white">Credit Card</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          Credit Card
+                        </span>
                       </div>
                     </label>
                   </div>
 
-                  <div className={`flex items-center gap-3 p-4 border rounded-lg transition-all duration-200 ${
-                    formData.paymentMethod === 'financing' 
-                      ? 'border-tesla-blue bg-blue-50 dark:bg-tesla-blue/10' 
-                      : 'border-gray-300 dark:border-tesla-gray-600 hover:border-tesla-blue'
-                  }`}>
+                  <div
+                    className={`flex items-center gap-3 p-4 border rounded-lg transition-all duration-200 ${
+                      formData.paymentMethod === "financing"
+                        ? "border-tesla-blue bg-blue-50 dark:bg-tesla-blue/10"
+                        : "border-gray-300 dark:border-tesla-gray-600 hover:border-tesla-blue"
+                    }`}>
                     <input
                       type="radio"
                       id="financing"
                       name="paymentMethod"
                       value="financing"
-                      checked={formData.paymentMethod === 'financing'}
+                      checked={formData.paymentMethod === "financing"}
                       onChange={handleChange}
                       className="w-4 h-4 text-tesla-blue"
                     />
-                    <label htmlFor="financing" className="flex-1 cursor-pointer">
+                    <label
+                      htmlFor="financing"
+                      className="flex-1 cursor-pointer">
                       <div className="flex items-center gap-2">
                         <Shield className="w-5 h-5" />
-                        <span className="font-medium text-gray-900 dark:text-white">Tesla Financing</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          Tesla Financing
+                        </span>
                       </div>
-                      <p className="text-sm text-gray-500 dark:text-tesla-gray-400 mt-1">0.99% APR for qualified buyers</p>
+                      <p className="text-sm text-gray-500 dark:text-tesla-gray-400 mt-1">
+                        0.99% APR for qualified buyers
+                      </p>
                     </label>
                   </div>
 
-                  <div className={`flex items-center gap-3 p-4 border rounded-lg transition-all duration-200 ${
-                    formData.paymentMethod === 'bank_transfer' 
-                      ? 'border-tesla-blue bg-blue-50 dark:bg-tesla-blue/10' 
-                      : 'border-gray-300 dark:border-tesla-gray-600 hover:border-tesla-blue'
-                  }`}>
+                  <div
+                    className={`flex items-center gap-3 p-4 border rounded-lg transition-all duration-200 ${
+                      formData.paymentMethod === "bank_transfer"
+                        ? "border-tesla-blue bg-blue-50 dark:bg-tesla-blue/10"
+                        : "border-gray-300 dark:border-tesla-gray-600 hover:border-tesla-blue"
+                    }`}>
                     <input
                       type="radio"
                       id="bank_transfer"
                       name="paymentMethod"
                       value="bank_transfer"
-                      checked={formData.paymentMethod === 'bank_transfer'}
+                      checked={formData.paymentMethod === "bank_transfer"}
                       onChange={handleChange}
                       className="w-4 h-4 text-tesla-blue"
                     />
-                    <label htmlFor="bank_transfer" className="flex-1 cursor-pointer">
+                    <label
+                      htmlFor="bank_transfer"
+                      className="flex-1 cursor-pointer">
                       <div className="flex items-center gap-2">
                         <Shield className="w-5 h-5" />
-                        <span className="font-medium text-gray-900 dark:text-white">Bank Transfer</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          Bank Transfer
+                        </span>
                       </div>
                     </label>
                   </div>
                 </div>
 
                 {/* Credit Card Form */}
-                {formData.paymentMethod === 'credit_card' && (
+                {formData.paymentMethod === "credit_card" && (
                   <div className="mt-6 space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-tesla-gray-300 mb-2">
@@ -617,10 +654,13 @@ export default function OrderPage() {
                   required
                   className="w-4 h-4 mt-1 text-tesla-blue rounded focus:ring-tesla-blue"
                 />
-                <label htmlFor="terms" className="text-sm text-gray-600 dark:text-tesla-gray-400">
-                  I agree to the Terms of Service and Privacy Policy. I understand that this 
-                  order is subject to vehicle availability and final approval. By placing this 
-                  order, I authorize Tesla to perform a credit check if I select financing.
+                <label
+                  htmlFor="terms"
+                  className="text-sm text-gray-600 dark:text-tesla-gray-400">
+                  I agree to the Terms of Service and Privacy Policy. I
+                  understand that this order is subject to vehicle availability
+                  and final approval. By placing this order, I authorize Tesla
+                  to perform a credit check if I select financing.
                 </label>
               </div>
 
@@ -635,8 +675,7 @@ export default function OrderPage() {
               <button
                 type="submit"
                 disabled={processing || !formData.termsAccepted}
-                className="w-full bg-black dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 px-6 rounded-lg font-bold text-lg transition-all duration-200 flex items-center justify-center gap-2"
-              >
+                className="w-full bg-black dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 px-6 rounded-lg font-bold text-lg transition-all duration-200 flex items-center justify-center gap-2">
                 {processing ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -703,7 +742,7 @@ export default function OrderPage() {
                         Estimated Delivery
                       </h4>
                       <p className="text-sm text-gray-600 dark:text-tesla-gray-400">
-                        {car?.available ? '2-3 business days' : '2-4 weeks'}
+                        {car?.available ? "2-3 business days" : "2-4 weeks"}
                       </p>
                     </div>
                   </div>
@@ -724,14 +763,12 @@ export default function OrderPage() {
                 <div className="space-y-2">
                   <a
                     href="tel:+18885551234"
-                    className="inline-block w-full text-center bg-tesla-blue hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors duration-200"
-                  >
+                    className="inline-block w-full text-center bg-tesla-blue hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors duration-200">
                     Call Support: (888) 555-1234
                   </a>
                   <a
-                    href="mailto:support@tsla.com"
-                    className="inline-block w-full text-center border border-tesla-blue text-tesla-blue hover:bg-blue-50 dark:hover:bg-tesla-blue/10 py-3 px-4 rounded-lg font-medium transition-colors duration-200"
-                  >
+                    href="mailto:support@tslavehiclepartners.com"
+                    className="inline-block w-full text-center border border-tesla-blue text-tesla-blue hover:bg-blue-50 dark:hover:bg-tesla-blue/10 py-3 px-4 rounded-lg font-medium transition-colors duration-200">
                     Email Support
                   </a>
                 </div>
@@ -748,8 +785,12 @@ export default function OrderPage() {
                       <span className="text-white text-xs">1</span>
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">Order Confirmation</h4>
-                      <p className="text-sm text-gray-600 dark:text-tesla-gray-400">Immediate</p>
+                      <h4 className="font-medium text-gray-900 dark:text-white">
+                        Order Confirmation
+                      </h4>
+                      <p className="text-sm text-gray-600 dark:text-tesla-gray-400">
+                        Immediate
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -757,8 +798,12 @@ export default function OrderPage() {
                       <span className="text-tesla-blue text-xs">2</span>
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">Vehicle Preparation</h4>
-                      <p className="text-sm text-gray-600 dark:text-tesla-gray-400">1-2 business days</p>
+                      <h4 className="font-medium text-gray-900 dark:text-white">
+                        Vehicle Preparation
+                      </h4>
+                      <p className="text-sm text-gray-600 dark:text-tesla-gray-400">
+                        1-2 business days
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -766,8 +811,12 @@ export default function OrderPage() {
                       <span className="text-tesla-blue text-xs">3</span>
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">Delivery</h4>
-                      <p className="text-sm text-gray-600 dark:text-tesla-gray-400">2-3 business days</p>
+                      <h4 className="font-medium text-gray-900 dark:text-white">
+                        Delivery
+                      </h4>
+                      <p className="text-sm text-gray-600 dark:text-tesla-gray-400">
+                        2-3 business days
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -777,5 +826,5 @@ export default function OrderPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

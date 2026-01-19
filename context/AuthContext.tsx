@@ -53,8 +53,7 @@ interface AuthContextType extends AuthState {
   }>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
-  setToken: (token: string) => void;
-  clearToken: () => void;
+  getToken: () => string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,6 +61,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const CACHE_KEY = "tsla_user_data";
 const CACHE_TS = "tsla_user_ts";
 const CACHE_TOKEN = "tsla_auth_token";
+const CACHE_REFRESH_TOKEN = "tsla_refresh_token";
 const CACHE_DURATION = 5 * 60 * 1000;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -76,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isInitialMount = useRef(true);
   const fetchLock = useRef(false);
 
+  // Get cached user and token
   const getCachedData = useCallback((): {
     user: User | null;
     token: string | null;
@@ -98,14 +99,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const setToken = useCallback((token: string) => {
-    localStorage.setItem(CACHE_TOKEN, token);
-    setState((prev) => ({ ...prev, token }));
-  }, []);
-
-  const clearToken = useCallback(() => {
-    localStorage.removeItem(CACHE_TOKEN);
-    setState((prev) => ({ ...prev, token: null }));
+  // Get current token
+  const getToken = useCallback(() => {
+    return localStorage.getItem(CACHE_TOKEN);
   }, []);
 
   const checkAuth = useCallback(async (force = false) => {
@@ -118,15 +114,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.success && response.user) {
         const user = response.user;
 
-        // Also try to get token if available in response
-        const token =
-          response.token || localStorage.getItem(CACHE_TOKEN) || null;
+        // Get token from localStorage (ApiClient now handles token storage)
+        const token = localStorage.getItem(CACHE_TOKEN) || null;
 
+        // Cache user data
         localStorage.setItem(CACHE_KEY, JSON.stringify(user));
         localStorage.setItem(CACHE_TS, Date.now().toString());
-        if (token) {
-          localStorage.setItem(CACHE_TOKEN, token);
-        }
 
         setState({
           user,
@@ -136,9 +129,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           token,
         });
       } else {
+        // Clear user cache but keep tokens (they might still be valid)
         localStorage.removeItem(CACHE_KEY);
         localStorage.removeItem(CACHE_TS);
-        // Don't clear token here - might still be valid
         setState((prev) => ({
           ...prev,
           user: null,
@@ -148,7 +141,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       console.error("Auth check failed:", err);
-      setState((prev) => ({ ...prev, loading: false, initialized: true }));
+      setState((prev) => ({
+        ...prev,
+        loading: false,
+        initialized: true,
+      }));
     } finally {
       fetchLock.current = false;
     }
@@ -180,15 +177,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (res.success && res.user) {
       const user = res.user;
-      const token = res.token || null;
+      const token = res.token || localStorage.getItem(CACHE_TOKEN) || null;
 
+      // Cache user data
       localStorage.setItem(CACHE_KEY, JSON.stringify(user));
       localStorage.setItem(CACHE_TS, Date.now().toString());
-      if (token) {
-        localStorage.setItem(CACHE_TOKEN, token);
-      }
 
-      setState({ user, loading: false, error: null, initialized: true, token });
+      setState({
+        user,
+        loading: false,
+        error: null,
+        initialized: true,
+        token,
+      });
       return { success: true, user, token };
     }
 
@@ -207,9 +208,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Logout API error:", error);
     } finally {
+      // Clear all localStorage
       localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem(CACHE_TS);
       localStorage.removeItem(CACHE_TOKEN);
+      localStorage.removeItem(CACHE_REFRESH_TOKEN);
+
       setState({
         user: null,
         loading: false,
@@ -229,10 +233,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       logout,
       refresh: () => checkAuth(true),
-      setToken,
-      clearToken,
+      getToken,
     }),
-    [state, checkAuth, setToken, clearToken],
+    [state, checkAuth, getToken],
   );
 
   return (
