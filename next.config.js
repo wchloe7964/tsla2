@@ -16,33 +16,36 @@ const nextConfig = {
       { protocol: "https", hostname: "**.tesla.com" },
     ].map((pattern) => ({ ...pattern, pathname: "/**" })),
 
-    // IMPORTANT: Cache busting configuration
-    minimumCacheTTL: 60, // 60 seconds minimum cache for images
+    // Cache settings
+    minimumCacheTTL: 60,
     formats: ["image/webp"],
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
 
-    // Add cache buster to image URLs
-    loader: "default",
-    path: "/_next/image",
+    // Disable device-based optimization for consistent caching
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
 
-  // 2. Performance - Enable proper ISR
+  // 2. Performance - CORRECT experimental options for Next.js 16
   experimental: {
-    optimizeCss: true,
-    // Re-enable proper caching
-    staleTimes: {
-      dynamic: 30, // 30 seconds for dynamic pages
-      static: 300, // 5 minutes for static pages
-    },
-    // Enable ISR memory cache
-    isrMemoryCacheSize: 512, // 512MB cache
+    optimizeCss: true, // Keep this one
+
+    // For Next.js 16+, use these instead:
+    staleTimes: false, // Remove this line entirely
+
+    // Instead of isrMemoryCacheSize, use:
+    workerThreads: false,
+    webpackMemoryOptimizations: true,
+
+    // Enable partial prerendering (beta feature for ISR)
+    // partialPrerendering: true, // Uncomment if you want to try beta features
   },
 
   // 3. SELECTIVE Cache-Control Headers (NOT global no-store!)
   async headers() {
     return [
-      // Only disable cache for admin/user pages that need freshdata
+      // Only disable cache for admin/user pages that need fresh data
       {
         source: "/admin/:path*",
         headers: [
@@ -70,22 +73,13 @@ const nextConfig = {
           },
         ],
       },
-      {
-        source: "/portfolio/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "private, no-cache, max-age=0",
-          },
-        ],
-      },
       // For /cars page - enable ISR with revalidation
       {
         source: "/cars",
         headers: [
           {
             key: "Cache-Control",
-            value: "public, s-maxage=60, stale-while-revalidate=300",
+            value: "public, s-maxage=10, stale-while-revalidate=30",
           },
         ],
       },
@@ -123,16 +117,19 @@ const nextConfig = {
     ];
   },
 
-  // 5. Enable ISR for dynamic pages
-  env: {
-    NEXT_PUBLIC_APP_VERSION:
-      process.env.VERCEL_GIT_COMMIT_SHA || `build-${Date.now()}`,
-  },
+  // 5. Disable ETags for better cache control
+  generateEtags: false,
+
+  // 6. Compress responses
+  compress: true,
 
   reactStrictMode: true,
 
-  // 6. Disable static generation cache issues
-  generateEtags: false,
+  // 7. Build output configuration
+  output: "standalone", // Creates optimized standalone build
+
+  // 8. Disable x-powered-by header
+  poweredByHeader: false,
 };
 
 module.exports = nextConfig;

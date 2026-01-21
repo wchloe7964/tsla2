@@ -35,7 +35,7 @@ export default async function UserDetailPage({ params }: PageProps) {
   if (!user) notFound();
 
   const transactions = [...(user.wallet?.transactions || [])].sort(
-    (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
 
   // Verbiage Sync: Available Balance, Capital Invested, Net Profits
@@ -61,7 +61,7 @@ export default async function UserDetailPage({ params }: PageProps) {
               src={
                 user.avatar ||
                 `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  user.name
+                  user.name,
                 )}&background=111&color=fff`
               }
               className="w-32 h-32 rounded-[2.5rem] object-cover border-2 border-white/5 shadow-2xl"
