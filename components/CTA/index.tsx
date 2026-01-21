@@ -18,7 +18,7 @@ const CTA = ({ authenticated }: CTAProps) => {
   const stats = [
     { label: "Uptime", value: "99.9%" },
     { label: "Volume", value: "$1B+" },
-    { label: "Users", value: "50k+" },
+    { label: "Partners", value: "50k+" },
   ];
 
   return (

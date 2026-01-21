@@ -14,30 +14,30 @@ const nextConfig = {
       { protocol: "https", hostname: "upload.wikimedia.org" },
       { protocol: "https", hostname: "**.unsplash.com" },
       { protocol: "https", hostname: "**.tesla.com" },
+      {
+        protocol: "https",
+        hostname: "**", // Allow all HTTPS domains for news images
+      },
     ].map((pattern) => ({ ...pattern, pathname: "/**" })),
 
-    // Cache settings
     minimumCacheTTL: 60,
     formats: ["image/webp"],
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-
-    // Disable device-based optimization for consistent caching
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
 
-  // 2. Performance - CORRECT experimental options for Next.js 16
+  // 2. Performance
   experimental: {
     optimizeCss: true,
     webpackMemoryOptimizations: true,
     workerThreads: false,
   },
 
-  // 3. SELECTIVE Cache-Control Headers (NOT global no-store!)
+  // 3. SELECTIVE Cache-Control Headers
   async headers() {
     return [
-      // Only disable cache for admin/user pages that need fresh data
       {
         source: "/admin/:path*",
         headers: [
@@ -59,13 +59,9 @@ const nextConfig = {
       {
         source: "/account/:path*",
         headers: [
-          {
-            key: "Cache-Control",
-            value: "private, no-cache, max-age=0",
-          },
+          { key: "Cache-Control", value: "private, no-cache, max-age=0" },
         ],
       },
-      // For /cars page - enable ISR with revalidation
       {
         source: "/cars",
         headers: [
@@ -75,7 +71,6 @@ const nextConfig = {
           },
         ],
       },
-      // Static assets - cache aggressively
       {
         source: "/_next/static/:path*",
         headers: [
@@ -102,26 +97,19 @@ const nextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
-        }/api/:path*`,
+        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/:path*`,
       },
     ];
   },
 
-  // 5. Disable ETags for better cache control
   generateEtags: false,
-
-  // 6. Compress responses
   compress: true,
-
   reactStrictMode: true,
-
-  // 7. Build output configuration
-  output: "standalone", // Creates optimized standalone build
-
-  // 8. Disable x-powered-by header
+  output: "standalone",
   poweredByHeader: false,
+
+  // 9. FIX FOR TURBOPACK HMR (Lucide React instantiation error)
+  transpilePackages: ["lucide-react"],
 };
 
 module.exports = nextConfig;
