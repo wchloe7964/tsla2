@@ -29,17 +29,9 @@ const nextConfig = {
 
   // 2. Performance - CORRECT experimental options for Next.js 16
   experimental: {
-    optimizeCss: true, // Keep this one
-
-    // For Next.js 16+, use these instead:
-    staleTimes: false, // Remove this line entirely
-
-    // Instead of isrMemoryCacheSize, use:
-    workerThreads: false,
+    optimizeCss: true,
     webpackMemoryOptimizations: true,
-
-    // Enable partial prerendering (beta feature for ISR)
-    // partialPrerendering: true, // Uncomment if you want to try beta features
+    workerThreads: false,
   },
 
   // 3. SELECTIVE Cache-Control Headers (NOT global no-store!)
