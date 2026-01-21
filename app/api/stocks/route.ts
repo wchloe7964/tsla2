@@ -1,72 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server'
-import connectDB from '@/lib/db/mongodb'
-import Stock from '@/lib/models/Stock'
+// app/api/stocks/route.ts
+import { NextResponse } from "next/server";
 
-export async function GET(request: NextRequest) {
+const FINNHUB_KEY = process.env.FINNHUB_API_KEY; // Get from finnhub.io
+const SYMBOLS = ["TSLA", "AAPL", "NVDA", "MSFT", "AMZN"];
+
+export async function GET() {
   try {
-    await connectDB()
-    
-    const { searchParams } = new URL(request.url)
-    const symbols = searchParams.get('symbols')
-    
-    if (symbols) {
-      const symbolArray = symbols.split(',')
-      const stocks = await Stock.find({ symbol: { $in: symbolArray } })
-      return NextResponse.json({ stocks })
-    }
-    
-    // Get all stocks with pagination
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '20')
-    const skip = (page - 1) * limit
-    
-    const [stocks, total] = await Promise.all([
-      Stock.find()
-        .skip(skip)
-        .limit(limit)
-        .sort({ volume: -1 }),
-      Stock.countDocuments()
-    ])
-    
-    // Get featured stocks (top 5 by volume)
-    const featured = await Stock.find()
-      .sort({ volume: -1 })
-      .limit(5)
-    
-    // Get top gainers
-    const gainers = await Stock.find()
-      .sort({ changePercent: -1 })
-      .limit(5)
-    
-    // Get top losers
-    const losers = await Stock.find()
-      .sort({ changePercent: 1 })
-      .limit(5)
-    
-    // Get most active
-    const active = await Stock.find()
-      .sort({ volume: -1 })
-      .limit(5)
-    
-    return NextResponse.json({
-      stocks,
-      featured,
-      gainers,
-      losers,
-      active,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    })
-    
-  } catch (error: any) {
-    console.error('Get stocks error:', error)
+    const stockPromises = SYMBOLS.map(async (symbol) => {
+      const res = await fetch(
+        `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_KEY}`,
+        { next: { revalidate: 60 } }, // Cache for 1 minute
+      );
+      const data = await res.json();
+      return {
+        symbol,
+        price: data.c, // Current price
+        change: data.d, // Change
+        changePercent: data.dp, // Percent change
+      };
+    });
+
+    const results = await Promise.all(stockPromises);
+    return NextResponse.json({ success: true, data: results });
+  } catch (error) {
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+      { success: false, error: "API_FETCH_FAILED" },
+      { status: 500 },
+    );
   }
 }
