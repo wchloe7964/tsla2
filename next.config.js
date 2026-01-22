@@ -22,18 +22,22 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
-  // 2. Turbopack & HMR Stability (The Fix for your Error)
-  transpilePackages: ["lucide-react"], // Forces Lucide to be handled correctly
+  // 2. Stable Turbopack Configuration (Next.js 16 Fix)
+  transpilePackages: ["lucide-react"],
+
+  // Move turbo configuration to top-level 'turbopack'
+  turbopack: {
+    resolveAlias: {
+      "lucide-react": "lucide-react/dist/esm/lucide-react",
+    },
+  },
+
   experimental: {
     optimizeCss: true,
     webpackMemoryOptimizations: true,
-    workerThreads: false,
-    // Add specific Turbo configurations if needed for Next.js 16
-    turbo: {
-      resolveAlias: {
-        "lucide-react": "lucide-react/dist/esm/lucide-react",
-      },
-    },
+    // Note: filesystem cache for dev is now stable/default in 16.1+
+    // but you can still toggle it if you have local write issues
+    turbopackFileSystemCacheForDev: true,
   },
 
   // 3. Headers
@@ -51,8 +55,6 @@ const nextConfig = {
   },
 
   // 4. API Redirection Logic
-  // IMPORTANT: Ensure you aren't rewriting internal Next.js APIs to an external port 5000
-  // unless you are actually running a separate backend server there.
   async rewrites() {
     return [
       {

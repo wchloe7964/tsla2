@@ -14,7 +14,7 @@ export default function LiveTickerBanner() {
         const results = await Promise.all(
           TICKERS.map(async (symbol) => {
             const res = await fetch(
-              `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${process.env.NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_FINNHUB_API_KEY}`,
+              `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${process.env.NEXT_PUBLIC_FINNHUB_API_KEY}`,
             );
             const data = await res.json();
             return {

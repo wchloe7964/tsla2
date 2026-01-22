@@ -2,9 +2,7 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const FINNHUB_KEY =
-    process.env
-      .NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_FINNHUB_API_KEY;
+  const FINNHUB_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY;
   const symbol = "TSLA";
 
   // Fetch news from the last 7 days to ensure we have images and variety

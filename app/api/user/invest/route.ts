@@ -3,36 +3,58 @@ import connectToDatabase from "@/lib/db/mongodb";
 import User from "@/lib/models/User";
 import InvestmentPlan from "@/lib/models/InvestmentPlan";
 import Investment from "@/lib/models/Investment";
-import { getServerSession } from "next-auth"; // Adjust based on your auth setup
+// 1. Import your custom helper
+import { getCurrentUser } from "@/lib/utils/auth";
 
 export async function POST(req: Request) {
   try {
     await connectToDatabase();
     const { planId, amount } = await req.json();
 
-    // 1. Get User from Session (simplified for example)
-    const session = await getServerSession();
-    if (!session)
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // 2. Use your helper to get the lean JWT payload
+    const session = await getCurrentUser();
 
-    const userId = session.user.id;
+    // 3. Robust Auth Check: Ensure session AND userId exist
+    if (!session || !session.userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Now TypeScript knows session.userId exists
+    const userId = session.userId;
+
     const user = await User.findById(userId);
+    if (!user)
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+
     const plan = await InvestmentPlan.findById(planId);
 
-    // 2. Validation
+    // Validation
     if (!plan || !plan.isActive)
       return NextResponse.json({ error: "Invalid Plan" }, { status: 400 });
+
     if (amount < plan.minAmount)
       return NextResponse.json({ error: "Below minimum" }, { status: 400 });
-    if (user.balance < amount)
+
+    // Check wallet balance (matching your User model field)
+    const currentBalance = user.wallet?.balance || 0;
+    if (currentBalance < amount)
       return NextResponse.json(
         { error: "Insufficient Balance" },
         { status: 400 },
       );
 
-    // 3. Process the "Movement"
-    // Deduct from User Balance
-    user.balance -= amount;
+    // 4. Process the Transaction
+    user.wallet.balance -= amount;
+
+    // Push a transaction record to the user's ledger for transparency
+    user.wallet.transactions.push({
+      type: "withdrawal", // or "investment"
+      amount: amount,
+      description: `Plan Activation: ${plan.name}`,
+      status: "completed",
+      date: new Date(),
+    });
+
     await user.save();
 
     // Calculate End Date
@@ -40,22 +62,23 @@ export async function POST(req: Request) {
     endDate.setDate(endDate.getDate() + plan.durationDays);
 
     // Create Investment Record
-    const newInvestment = await Investment.create({
+    await Investment.create({
       userId,
       planId: plan._id,
       planName: plan.name,
       amount,
       dailyReturn: plan.dailyReturn,
       endDate: endDate,
+      status: "active",
     });
 
     return NextResponse.json({
       success: true,
-      message: "Node Initialized Successfully",
-      newBalance: user.balance,
+      message: "Neural Node Initialized",
+      newBalance: user.wallet.balance,
     });
   } catch (error) {
     console.error("Investment Error:", error);
-    return NextResponse.json({ error: "Transaction Failed" }, { status: 500 });
+    return NextResponse.json({ error: "Neural Sync Failed" }, { status: 500 });
   }
 }

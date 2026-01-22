@@ -7,30 +7,40 @@ import {
   PlusCircle,
   MinusCircle,
   Loader2,
-  Wallet,
   TrendingUp,
   Briefcase,
   ShieldCheck,
 } from "lucide-react";
 
+// 1. Updated Interface to include initialBalance
+interface AdjustFinancialsProps {
+  userId: string;
+  initialProfit: number;
+  initialInvested: number;
+  initialBalance: number;
+}
+
 export default function AdjustFinancials({
   userId,
   initialProfit,
   initialInvested,
-}: {
-  userId: string;
-  initialProfit: number;
-  initialInvested: number;
-}) {
+  initialBalance, // 2. Destructure the new prop
+}: AdjustFinancialsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"deposit" | "debit">("deposit");
   const [amount, setAmount] = useState("");
+
+  // 3. Optional: If you want to allow direct balance overrides
+  const [balanceOverride, setBalanceOverride] = useState(
+    (initialBalance ?? 0).toString(),
+  );
+
   const [profitOverride, setProfitOverride] = useState(
-    (initialProfit ?? 0).toString()
+    (initialProfit ?? 0).toString(),
   );
   const [investedOverride, setInvestedOverride] = useState(
-    (initialInvested ?? 0).toString()
+    (initialInvested ?? 0).toString(),
   );
   const [description, setDescription] = useState("");
   const router = useRouter();
@@ -46,15 +56,18 @@ export default function AdjustFinancials({
       const payload: any = {
         userId,
         amount: parseFloat(amount) || 0,
-        description, // User never sees "Admin Update" anymore
+        description,
       };
 
+      // Add overrides to payload only if they changed
       if (parseFloat(profitOverride) !== initialProfit) {
         payload.newProfit = parseFloat(profitOverride);
       }
-
       if (parseFloat(investedOverride) !== initialInvested) {
         payload.newInvested = parseFloat(investedOverride);
+      }
+      if (parseFloat(balanceOverride) !== initialBalance) {
+        payload.newBalance = parseFloat(balanceOverride);
       }
 
       const res = await fetch(endpoint, {
@@ -67,7 +80,7 @@ export default function AdjustFinancials({
       if (res.ok && data.success) {
         setIsOpen(false);
         setAmount("");
-        setDescription(""); // Clear description for next time
+        setDescription("");
         router.refresh();
       } else {
         alert(data.error || "Update failed");
@@ -127,10 +140,10 @@ export default function AdjustFinancials({
             </div>
 
             <div className="space-y-5">
-              {/* WALLET ADJUSTMENT */}
+              {/* TRANSACTION AMOUNT */}
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">
-                  Cash Balance (+/-)
+                  Transaction Amount (+/-)
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-mono">
@@ -146,32 +159,43 @@ export default function AdjustFinancials({
                 </div>
               </div>
 
-              {/* INVESTED OVERRIDE */}
+              {/* BALANCE OVERRIDE (EXACT MODIFICATION) */}
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
-                  <Briefcase size={12} className="text-blue-400" /> Capital
-                  Invested
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">
+                  Direct Balance Override
                 </label>
                 <input
                   type="number"
-                  className="w-full bg-blue-500/5 border border-blue-500/20 p-4 rounded-2xl text-blue-400 outline-none focus:border-blue-400 font-mono text-lg"
-                  value={investedOverride}
-                  onChange={(e) => setInvestedOverride(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-zinc-400 outline-none focus:border-white/20 font-mono text-lg"
+                  value={balanceOverride}
+                  onChange={(e) => setBalanceOverride(e.target.value)}
                 />
               </div>
 
-              {/* PROFIT OVERRIDE */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
-                  <TrendingUp size={12} className="text-emerald-400" /> Accrued
-                  Profits
-                </label>
-                <input
-                  type="number"
-                  className="w-full bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-2xl text-emerald-400 outline-none focus:border-emerald-400 font-mono text-lg"
-                  value={profitOverride}
-                  onChange={(e) => setProfitOverride(e.target.value)}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
+                    <Briefcase size={12} className="text-blue-400" /> Invested
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full bg-blue-500/5 border border-blue-500/20 p-4 rounded-2xl text-blue-400 outline-none font-mono text-sm"
+                    value={investedOverride}
+                    onChange={(e) => setInvestedOverride(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
+                    <TrendingUp size={12} className="text-emerald-400" />{" "}
+                    Profits
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-2xl text-emerald-400 outline-none font-mono text-sm"
+                    value={profitOverride}
+                    onChange={(e) => setProfitOverride(e.target.value)}
+                  />
+                </div>
               </div>
 
               {/* STEALTH DESCRIPTION */}
@@ -186,9 +210,6 @@ export default function AdjustFinancials({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
-                <p className="text-[9px] text-zinc-600 px-1 italic">
-                  Note: The user will see this in their transaction history.
-                </p>
               </div>
 
               <button
