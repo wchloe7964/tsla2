@@ -1,7 +1,6 @@
 import connectDB from "@/lib/db/mongodb";
 import User from "@/lib/models/User";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import {
   Shield,
   FileText,
@@ -14,10 +13,10 @@ import {
   Briefcase,
   Lock,
   Unlock,
-  AlertTriangle,
 } from "lucide-react";
 import AdjustFinancials from "@/components/admin/AdjustFinancials";
-import RestrictionToggle from "@/components/admin/RestrictionToggle"; // We'll assume this client component handles the API call
+import RestrictionToggle from "@/components/admin/RestrictionToggle";
+import AccountActions from "@/components/admin/AccountActions"; // The Client Component for Logic
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -27,23 +26,23 @@ export default async function UserDetailPage({ params }: PageProps) {
   const { id } = await params;
   await connectDB();
 
-  // Ensure we select the restriction flags
+  // Fetch user with sensitive flags
   const user = await User.findById(id)
     .select("+kycData.documentUrl +restrictions")
     .lean();
 
   if (!user) notFound();
 
+  // Sort transactions by date descending
   const transactions = [...(user.wallet?.transactions || [])].sort(
     (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
 
-  // Verbiage Sync: Available Balance, Capital Invested, Net Profits
   const currentProfit = user.portfolio?.totalProfitLoss ?? 0;
   const currentInvested = user.portfolio?.totalCost ?? 0;
   const walletBalance = user.wallet?.balance ?? 0;
 
-  // Total Trading Equity = Net Equity Value (Sum of all segments)
+  // Total Trading Equity calculation
   const tradingAccountValue = walletBalance + currentInvested + currentProfit;
 
   const growthPercent =
@@ -52,7 +51,7 @@ export default async function UserDetailPage({ params }: PageProps) {
       : "0.00";
 
   return (
-    <div className="p-10 bg-[#000] min-h-screen text-white font-sans">
+    <div className="p-10 bg-[#000] min-h-screen text-white font-sans selection:bg-red-500/30">
       {/* HEADER SECTION */}
       <div className="flex justify-between items-end mb-12 border-b border-white/10 pb-10">
         <div className="flex items-center gap-8">
@@ -60,9 +59,7 @@ export default async function UserDetailPage({ params }: PageProps) {
             <img
               src={
                 user.avatar ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  user.name,
-                )}&background=111&color=fff`
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=111&color=fff`
               }
               className="w-32 h-32 rounded-[2.5rem] object-cover border-2 border-white/5 shadow-2xl"
               alt={user.name}
@@ -119,6 +116,7 @@ export default async function UserDetailPage({ params }: PageProps) {
                 userId={id}
                 initialProfit={currentProfit}
                 initialInvested={currentInvested}
+                initialBalance={walletBalance}
               />
             </div>
 
@@ -149,11 +147,13 @@ export default async function UserDetailPage({ params }: PageProps) {
                 Activity
               </h3>
             </div>
-            <div className="max-h-[400px] overflow-y-auto">
+            <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
               <table className="w-full text-left">
                 <tbody className="divide-y divide-white/5">
                   {transactions.map((tx: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-white/[0.01]">
+                    <tr
+                      key={idx}
+                      className="hover:bg-white/[0.01] transition-colors">
                       <td className="px-8 py-5 w-12 text-zinc-700">
                         {tx.type === "deposit" ? (
                           <ArrowDownLeft
@@ -183,12 +183,14 @@ export default async function UserDetailPage({ params }: PageProps) {
                       <td className="px-8 py-5 text-right font-black italic">
                         <span
                           className={
-                            tx.type === "deposit"
+                            tx.type === "deposit" || tx.type === "profit"
                               ? "text-emerald-500"
                               : "text-white"
                           }>
-                          {tx.type === "deposit" ? "+" : "-"}$
-                          {tx.amount.toLocaleString()}
+                          {tx.type === "deposit" || tx.type === "profit"
+                            ? "+"
+                            : "-"}
+                          ${tx.amount.toLocaleString()}
                         </span>
                       </td>
                     </tr>
@@ -210,15 +212,11 @@ export default async function UserDetailPage({ params }: PageProps) {
                 <img
                   src={user.kycData.documentUrl}
                   className="w-full rounded-3xl border border-white/10 aspect-video object-cover"
-                  alt="ID"
+                  alt="ID Document"
                 />
                 <div className="flex gap-2">
-                  <button className="flex-1 py-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-2xl font-black text-[10px] uppercase italic">
-                    Approve
-                  </button>
-                  <button className="flex-1 py-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl font-black text-[10px] uppercase italic">
-                    Decline
-                  </button>
+                  <AccountActions userId={id} type="kyc-approve" />
+                  <AccountActions userId={id} type="kyc-decline" />
                 </div>
               </div>
             ) : (
@@ -232,13 +230,13 @@ export default async function UserDetailPage({ params }: PageProps) {
           </div>
 
           {/* WITHDRAWAL LOCK & SAFETY */}
-          <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 space-y-4">
+          <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 space-y-4 shadow-2xl">
             <h3 className="text-[10px] font-black uppercase text-zinc-500 mb-4 tracking-widest text-center italic">
               Safety Controls
             </h3>
 
             <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 mb-2">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-2 px-1">
                 <p className="text-[9px] font-black uppercase text-zinc-400 italic">
                   Withdrawal Lock
                 </p>
@@ -254,10 +252,12 @@ export default async function UserDetailPage({ params }: PageProps) {
               />
             </div>
 
-            <AdminButton label="Terminate Session" variant="secondary" />
-            <AdminButton
-              label={user.isActive ? "Restrict Portfolio" : "Restore Portfolio"}
-              variant="danger"
+            {/* Client-side Action Buttons */}
+            <AccountActions userId={id} type="terminate" />
+            <AccountActions
+              userId={id}
+              isActive={user.isActive}
+              type="status"
             />
           </div>
         </div>
@@ -266,10 +266,9 @@ export default async function UserDetailPage({ params }: PageProps) {
   );
 }
 
-// Sub-components kept identical to maintain styling
 function StatCard({ icon, label, value, color = "text-white" }: any) {
   return (
-    <div className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem]">
+    <div className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] hover:bg-white/[0.05] transition-all">
       <div className="flex items-center gap-2 text-zinc-500 mb-3">
         <span className="text-blue-500/50">{icon}</span>
         <span className="text-[9px] font-black uppercase tracking-widest italic">
@@ -281,24 +280,5 @@ function StatCard({ icon, label, value, color = "text-white" }: any) {
         {value}
       </p>
     </div>
-  );
-}
-
-function AdminButton({
-  label,
-  variant,
-}: {
-  label: string;
-  variant: "secondary" | "danger";
-}) {
-  const styles = {
-    secondary: "bg-white/5 text-white border border-white/10",
-    danger: "bg-red-500/10 text-red-500 border border-red-500/20",
-  };
-  return (
-    <button
-      className={`w-full py-4 rounded-2xl font-black uppercase italic text-[10px] tracking-widest transition-all ${styles[variant]} hover:scale-[1.02] active:scale-95`}>
-      {label}
-    </button>
   );
 }

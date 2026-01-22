@@ -1,139 +1,180 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { apiClient } from "@/lib/api/client";
-import { Loader2, TrendingUp, Car, Sparkles, ChevronRight } from "lucide-react";
-import InvestmentCard from "@/components/investments/InvestmentCard";
-import { formatCurrency } from "@/lib/utils/format";
+import { useState, useEffect } from "react";
+import { Zap, ArrowRight, ShieldCheck, X, Wallet, Loader2 } from "lucide-react";
 
-export default function InvestmentsPage() {
-  const [availableProducts, setAvailableProducts] = useState([]);
-  const [activeInvestments, setActiveInvestments] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function UserInvestPage() {
+  const [plans, setPlans] = useState<any[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [amount, setAmount] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Fetch real plans from the API we built for the Admin
   useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        const [productsRes, portfolioRes] = await Promise.all([
-          apiClient.getInvestments(),
-          apiClient.getPortfolio(),
-        ]);
-
-        if (productsRes.success) {
-          setAvailableProducts(
-            productsRes.investments || productsRes.data || []
-          );
-        }
-
-        if (portfolioRes.success) {
-          setActiveInvestments(portfolioRes.data.portfolio.investments || []);
-        }
-      } catch (err) {
-        console.error("Data loading error:", err);
-      }
-      setLoading(false);
-    }
-    loadData();
+    fetch("/api/admin/plans")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setPlans(data.plans);
+        else
+          setPlans([
+            // Fallback if API isn't ready
+            {
+              name: "Model 3 Node",
+              dailyReturn: 1.8,
+              minAmount: 500,
+              durationDays: 30,
+            },
+            {
+              name: "Model X Matrix",
+              dailyReturn: 2.5,
+              minAmount: 5000,
+              durationDays: 60,
+            },
+            {
+              name: "Cybertruck Prime",
+              dailyReturn: 3.2,
+              minAmount: 15000,
+              durationDays: 90,
+            },
+          ]);
+      });
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-      </div>
-    );
-  }
+  const handleInvest = async () => {
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/user/invest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId: selectedPlan._id,
+          amount: parseFloat(amount),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Show Success Animation/Toast
+        alert(`Node Authorized. Remaining Balance: $${data.newBalance}`);
+        setSelectedPlan(null);
+      } else {
+        alert(data.error || "System Error");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white pt-32 pb-20 px-6">
-      <div className="max-w-7xl mx-auto space-y-24">
-        {/* ACTIVE PLANS */}
-        {activeInvestments.length > 0 && (
-          <section>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-[1px] w-12 bg-emerald-500 shadow-[0_0_10px_#10b981]" />
-              <span className="text-[10px] uppercase tracking-[0.4em] font-black text-emerald-500 italic">
-                Growing right now
-              </span>
+    <div className="max-w-6xl mx-auto py-20 px-6 min-h-screen">
+      <div className="text-center mb-16">
+        <h2 className="text-red-600 text-[10px] font-black uppercase tracking-[0.4em] mb-4">
+          Capital Allocation
+        </h2>
+        <h1 className="text-5xl font-black uppercase italic tracking-tighter">
+          Choose Your{" "}
+          <span className="text-zinc-800 text-outline">Growth Node</span>
+        </h1>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {plans.map((plan) => (
+          <div
+            key={plan.name}
+            className="bg-zinc-900/20 border border-white/5 rounded-[3rem] p-10 flex flex-col hover:border-red-600/30 transition-all group relative overflow-hidden">
+            <div className="mb-8">
+              <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">
+                {plan.durationDays} Day Term
+              </p>
+              <h3 className="text-3xl font-black italic uppercase tracking-tighter text-white">
+                {plan.name}
+              </h3>
             </div>
-            <h2 className="text-6xl font-black italic uppercase tracking-tighter mb-12">
-              My <span className="text-zinc-800">Growth</span>
-            </h2>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {activeInvestments.map((inv: any) => (
-                <div
-                  key={inv._id}
-                  className="relative group bg-white/[0.03] border border-white/10 rounded-[3rem] p-10 overflow-hidden backdrop-blur-3xl">
-                  <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-30 transition-all">
-                    <Car size={40} className="text-emerald-500" />
-                  </div>
-
-                  <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-black mb-1 italic">
-                    {inv.planType} Plan
-                  </p>
-                  <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-8">
-                    How I'm Doing
-                  </h3>
-
-                  <div className="space-y-6">
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <p className="text-[9px] text-zinc-600 uppercase font-black mb-1">
-                          What it's worth
-                        </p>
-                        <p className="text-4xl font-light tracking-tighter text-white">
-                          {formatCurrency(inv.amount + (inv.returns || 0))}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-black text-emerald-500 italic">
-                          +{formatCurrency(inv.returns || 0)} made
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 w-full animate-pulse shadow-[0_0_15px_#10b981]" />
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="mb-10">
+              <p className="text-5xl font-light tracking-tighter mb-1 text-white">
+                {plan.dailyReturn}%
+              </p>
+              <p className="text-[10px] text-zinc-600 font-black uppercase tracking-widest">
+                Daily Profit Margin
+              </p>
             </div>
-          </section>
-        )}
 
-        {/* SHOPPING */}
-        <section>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="h-[1px] w-12 bg-blue-600 shadow-[0_0_10px_#2563eb]" />
-            <span className="text-[10px] uppercase tracking-[0.4em] font-black text-blue-500 italic">
-              New ways to grow
-            </span>
+            <div className="mt-auto">
+              <div className="flex justify-between items-center mb-6">
+                <span className="text-zinc-600 text-[10px] font-black uppercase">
+                  Min. Entry
+                </span>
+                <span className="text-xl font-bold italic text-white">
+                  ${plan.minAmount.toLocaleString()}
+                </span>
+              </div>
+              <button
+                onClick={() => setSelectedPlan(plan)}
+                className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 group-hover:bg-red-600 group-hover:text-white transition-all shadow-xl">
+                Select Node <ArrowRight size={14} />
+              </button>
+            </div>
           </div>
-          <h1 className="text-6xl font-black italic uppercase tracking-tighter mb-12">
-            Pick a <span className="text-zinc-800">Plan</span>
-          </h1>
+        ))}
+      </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {availableProducts.length > 0 ? (
-              availableProducts.map((product: any) => (
-                <div key={product._id} className="group cursor-pointer">
-                  <InvestmentCard product={product} />
+      {/* INVESTMENT MODAL */}
+      {selectedPlan && (
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6">
+          <div className="bg-[#0c0c0c] border border-white/10 p-10 rounded-[3rem] max-w-md w-full shadow-2xl relative">
+            <button
+              onClick={() => setSelectedPlan(null)}
+              className="absolute top-8 right-8 text-zinc-500 hover:text-white">
+              <X size={24} />
+            </button>
+
+            <div className="mb-8">
+              <h2 className="text-2xl font-black uppercase italic text-white mb-2">
+                Confirm Allocation
+              </h2>
+              <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest italic">
+                {selectedPlan.name} — {selectedPlan.dailyReturn}% Daily
+              </p>
+            </div>
+
+            <div className="space-y-6 mb-10">
+              <div>
+                <label className="text-[9px] text-zinc-600 uppercase font-black mb-3 block">
+                  Enter Amount ($)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder={selectedPlan.minAmount}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-10 pr-6 text-white outline-none focus:border-red-600 transition-all font-mono"
+                  />
                 </div>
-              ))
-            ) : (
-              <div className="col-span-full py-24 border-2 border-dashed border-white/5 rounded-[3rem] text-center bg-white/[0.01]">
-                <Sparkles size={32} className="mx-auto mb-4 text-zinc-800" />
-                <p className="text-zinc-600 text-xs uppercase tracking-widest font-black italic">
-                  No new plans right now. Check back soon!
+                <p className="text-[9px] text-zinc-700 mt-2 uppercase font-bold">
+                  Available Balance: $12,450.00
                 </p>
               </div>
-            )}
+            </div>
+
+            <button
+              onClick={handleInvest}
+              disabled={Number(amount) < selectedPlan.minAmount || isSubmitting}
+              className="w-full py-5 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-red-700 transition-all disabled:opacity-50 disabled:bg-zinc-800">
+              {isSubmitting ? (
+                <Loader2 className="animate-spin mx-auto" size={18} />
+              ) : (
+                "Initialize Growth Node"
+              )}
+            </button>
           </div>
-        </section>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

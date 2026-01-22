@@ -1,55 +1,41 @@
 import { NextResponse } from "next/server";
-import connectToDatabase from "@/lib/db/mongodb"; // Assuming MongoDB
-import Investment from "@/lib/models/Investment"; // Your Schema
+import connectToDatabase from "@/lib/db/mongodb";
+import Investment from "@/lib/models/Investment";
+import User from "@/lib/models/User";
 
 export async function GET() {
   try {
     await connectToDatabase();
 
-    // Aggregation for Stats
-    const totalUsers = await User.countDocuments();
-    const activePlans = await UserInvestment.find({ status: "active" });
-    const platformLiquidity = activePlans.reduce(
-      (acc, curr) => acc + curr.amount,
-      0,
-    );
+    // Fetch investments and populate user details (name/email)
+    const activeNodes = await Investment.find({ status: "active" })
+      .populate("userId", "name email")
+      .sort({ createdAt: -1 });
+
+    // Calculate total capital currently locked in nodes
+    const stats = await Investment.aggregate([
+      { $match: { status: "active" } },
+      {
+        $group: {
+          _id: null,
+          totalCapital: { $sum: "$amount" },
+          dailyLiability: {
+            $sum: {
+              $multiply: ["$amount", { $divide: ["$dailyReturn", 100] }],
+            },
+          },
+        },
+      },
+    ]);
 
     return NextResponse.json({
       success: true,
-      stats: {
-        totalUsers,
-        activeInvestmentsCount: activePlans.length,
-        platformLiquidity,
-      },
+      data: activeNodes,
+      summary: stats[0] || { totalCapital: 0, dailyLiability: 0 },
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: "System Stat Failure" },
-      { status: 500 },
-    );
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    await connectToDatabase();
-    const body = await request.json();
-
-    // Create the new investment "Node" available for users to buy
-    const newPlan = await Investment.create({
-      title: body.title,
-      description: body.description,
-      minAmount: body.minAmount,
-      roi: body.roi, // e.g., 15 for 15%
-      duration: body.duration, // in days
-      image: body.imageUrl, // URL from Cloudinary
-      planType: body.planType, // 'Tesla', 'Neural', etc.
-    });
-
-    return NextResponse.json({ success: true, data: newPlan });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: "Deployment Failed" },
+      { success: false, error: "Sync Failed" },
       { status: 500 },
     );
   }

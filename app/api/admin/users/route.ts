@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     // Selecting only what the table needs prevents header/body bloat
     const users = await User.find(filter)
       .select(
-        "name email role balance investedAmount totalProfitLoss kycLevel createdAt"
+        "name email role balance investedAmount totalProfitLoss kycLevel createdAt",
       )
       .sort({ createdAt: -1 })
       .lean();
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
         headers: {
           "Cache-Control": "no-store, max-age=0", // Prevent stale admin data
         },
-      }
+      },
     );
   } catch (error: any) {
     console.error("CRITICAL_API_GET_ERROR:", error.message);
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
         details:
           process.env.NODE_ENV === "development" ? error.message : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "Incomplete credentials: Name, Email, and Password required",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         success: true,
         user: userResponse,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error: any) {
     console.error("CRITICAL_API_POST_ERROR:", error.message);
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: "Identity conflict: Email already exists in infrastructure",
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
         success: false,
         error: error.message || "Manual entry failed",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
