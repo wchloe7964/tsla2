@@ -8,8 +8,8 @@ import {
   Loader2,
   X,
   Activity,
+  Settings,
   TrendingUp,
-  BarChart3,
   Zap,
 } from "lucide-react";
 
@@ -18,6 +18,7 @@ export default function AdminInvestments() {
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -32,7 +33,7 @@ export default function AdminInvestments() {
       const data = await res.json();
       if (data.success) setPlans(data.plans);
     } catch (err) {
-      console.error("Sync Error");
+      console.error("Sync Error:", err);
     } finally {
       setLoading(false);
     }
@@ -42,45 +43,75 @@ export default function AdminInvestments() {
     fetchPlans();
   }, []);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const openEditModal = (plan: any) => {
+    setFormData({
+      name: plan.name,
+      minAmount: plan.minAmount.toString(),
+      dailyReturn: plan.dailyReturn.toString(),
+      durationDays: plan.durationDays.toString(),
+    });
+    setEditingId(plan._id);
+    setIsCreating(true);
+  };
+
+  const closePortal = () => {
+    setIsCreating(false);
+    setEditingId(null);
+    setFormData({ name: "", minAmount: "", dailyReturn: "", durationDays: "" });
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to decommission this node?")) return;
+    try {
+      const res = await fetch(`/api/admin/plans?id=${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) fetchPlans();
+    } catch (err) {
+      alert("Delete failed");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+
+    const method = editingId ? "PATCH" : "POST";
+    const payload = editingId ? { ...formData, id: editingId } : formData;
+
     try {
       const res = await fetch("/api/admin/plans", {
-        method: "POST",
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
+
       if (res.ok) {
-        setIsCreating(false);
-        setFormData({
-          name: "",
-          minAmount: "",
-          dailyReturn: "",
-          durationDays: "",
-        });
+        closePortal();
         fetchPlans();
       }
+    } catch (err) {
+      console.error("Submission failed:", err);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="p-10 bg-[#050505] min-h-screen text-white selection:bg-red-500/30">
-      {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6">
-        <div className="relative">
+    <div className="p-6 md:p-10 bg-[#050505] min-h-screen text-white selection:bg-red-500/30">
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6 pt-10">
+        <div>
           <div className="flex items-center gap-3 mb-4">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
             </span>
             <h2 className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.5em]">
-              Asset Management System
+              System Core
             </h2>
           </div>
-          <h1 className="text-7xl font-black italic tracking-tighter uppercase leading-none">
+          <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter uppercase leading-none">
             Growth{" "}
             <span className="text-zinc-900 drop-shadow-[0_0_1px_rgba(255,255,255,0.1)]">
               Nodes
@@ -90,173 +121,148 @@ export default function AdminInvestments() {
 
         <button
           onClick={() => setIsCreating(true)}
-          className="group relative overflow-hidden px-10 py-5 bg-white text-black font-black uppercase text-[11px] tracking-[0.2em] rounded-full hover:bg-red-600 hover:text-white transition-all duration-500 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-          <span className="relative z-10 flex items-center gap-2">
-            <Plus size={18} strokeWidth={3} /> Deploy New Node
-          </span>
+          className="group px-8 py-4 bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] rounded-full hover:bg-red-600 hover:text-white transition-all duration-500 flex items-center gap-2">
+          <Plus size={16} strokeWidth={3} /> Add New Plan
         </button>
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-40 gap-4">
-          <Loader2 className="animate-spin text-red-600" size={32} />
-          <p className="text-[10px] uppercase font-black tracking-widest text-zinc-700">
-            Accessing Database...
+        <div className="flex flex-col items-center justify-center py-40 gap-4 opacity-20">
+          <Loader2 className="animate-spin" size={32} />
+          <p className="text-[10px] uppercase font-black tracking-widest">
+            Syncing Ledger...
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {plans.map((plan: any) => (
             <div
               key={plan._id}
-              className="group relative bg-[#0a0a0a] border border-white/[0.03] rounded-[3.5rem] p-10 transition-all duration-500 hover:border-red-600/50 hover:bg-[#0f0f0f] hover:-translate-y-2 overflow-hidden shadow-2xl">
-              {/* Background Accent */}
-              <div className="absolute -right-10 -top-10 w-40 h-40 bg-red-600/5 rounded-full blur-3xl group-hover:bg-red-600/10 transition-colors" />
-
-              <div className="flex justify-between items-start mb-10 relative z-10">
-                <div className="w-14 h-14 rounded-[1.5rem] bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/5 flex items-center justify-center text-red-600 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                  <HardDrive size={28} />
+              className="group relative bg-[#0a0a0a] border border-white/[0.03] rounded-[3rem] p-8 md:p-10 transition-all hover:border-red-600/50 overflow-hidden shadow-2xl">
+              <div className="flex justify-between items-start mb-10">
+                <div className="w-12 h-12 rounded-2xl bg-zinc-900 flex items-center justify-center text-red-600 border border-white/5 shadow-inner group-hover:scale-110 transition-transform">
+                  <HardDrive size={24} />
                 </div>
-                <div className="text-right">
-                  <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">
-                    Status
+                <span className="flex items-center gap-2 text-emerald-500 text-[9px] font-black uppercase">
+                  <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />{" "}
+                  Active
+                </span>
+              </div>
+
+              <h3 className="text-2xl font-black mb-1 italic uppercase tracking-tighter group-hover:text-red-500 transition-colors">
+                {plan.name}
+              </h3>
+              <p className="text-zinc-500 text-[9px] font-black uppercase tracking-widest mb-8 flex items-center gap-2">
+                <Activity size={10} /> {plan.durationDays} Day Cycle
+              </p>
+
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="bg-white/[0.02] p-4 rounded-2xl border border-white/5">
+                  <p className="text-zinc-600 text-[8px] font-black uppercase mb-1">
+                    Daily ROI
                   </p>
-                  <span className="flex items-center gap-2 text-emerald-500 text-[10px] font-black uppercase">
-                    <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />{" "}
-                    Live
-                  </span>
+                  <p className="text-xl font-mono font-bold">
+                    {plan.dailyReturn}%
+                  </p>
+                </div>
+                <div className="bg-white/[0.02] p-4 rounded-2xl border border-white/5">
+                  <p className="text-zinc-600 text-[8px] font-black uppercase mb-1">
+                    Min Entry
+                  </p>
+                  <p className="text-xl font-mono font-bold">
+                    ${plan.minAmount.toLocaleString()}
+                  </p>
                 </div>
               </div>
 
-              <div className="relative z-10">
-                <h3 className="text-3xl font-black mb-1 italic uppercase tracking-tighter group-hover:text-red-500 transition-colors">
-                  {plan.name}
-                </h3>
-                <div className="flex items-center gap-2 mb-8">
-                  <Activity size={12} className="text-zinc-700" />
-                  <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">
-                    {plan.durationDays} Day Deployment Cycle
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div className="bg-white/[0.02] border border-white/[0.03] p-6 rounded-[2rem] hover:bg-white/[0.04] transition-colors">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp size={10} className="text-emerald-500" />
-                      <p className="text-zinc-600 text-[8px] font-black uppercase tracking-tighter">
-                        Daily ROI
-                      </p>
-                    </div>
-                    <p className="text-2xl font-mono font-bold text-white tracking-tighter">
-                      {plan.dailyReturn}
-                      <span className="text-xs text-emerald-500 ml-0.5">%</span>
-                    </p>
-                  </div>
-                  <div className="bg-white/[0.02] border border-white/[0.03] p-6 rounded-[2rem] hover:bg-white/[0.04] transition-colors">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Zap size={10} className="text-amber-500" />
-                      <p className="text-zinc-600 text-[8px] font-black uppercase tracking-tighter">
-                        Min. Entry
-                      </p>
-                    </div>
-                    <p className="text-2xl font-mono font-bold text-white tracking-tighter">
-                      <span className="text-xs text-zinc-500 mr-0.5">$</span>
-                      {plan.minAmount.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-6 border-t border-white/5">
-                  <button className="text-[9px] font-black uppercase tracking-widest text-zinc-600 hover:text-white transition-colors flex items-center gap-2">
-                    <BarChart3 size={12} /> Analytics
-                  </button>
-                  <button className="p-3 bg-red-600/5 hover:bg-red-600 hover:text-white text-red-600 rounded-2xl transition-all border border-red-600/10">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
+              <div className="flex items-center gap-3 pt-6 border-t border-white/5">
+                <button
+                  onClick={() => openEditModal(plan)}
+                  className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white flex items-center gap-2 transition-colors">
+                  <Settings size={12} /> Update Plan
+                </button>
+                <button
+                  onClick={() => handleDelete(plan._id)}
+                  className="p-3 bg-red-600/5 hover:bg-red-600 hover:text-white text-red-600 rounded-xl transition-all ml-auto">
+                  <Trash2 size={14} />
+                </button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* CREATE MODAL: TECH OVERLAY */}
+      {/* MODAL */}
       {isCreating && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
           <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
-            onClick={() => setIsCreating(false)}
+            className="absolute inset-0 bg-black/90 backdrop-blur-sm"
+            onClick={closePortal}
           />
-
           <form
-            onSubmit={handleCreate}
-            className="relative bg-[#0c0c0c] border border-white/10 p-12 rounded-[4rem] max-w-2xl w-full shadow-[0_0_100px_rgba(220,38,38,0.15)] overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex justify-between items-start mb-12">
+            onSubmit={handleSubmit}
+            className="relative bg-[#0c0c0c] border border-white/10 p-8 md:p-12 rounded-[3rem] max-w-xl w-full shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-start mb-10">
               <div>
-                <h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">
-                  Configure <span className="text-red-600">Node</span>
+                <h2 className="text-3xl font-black uppercase italic tracking-tighter">
+                  {editingId ? "Update" : "Deploy"}{" "}
+                  <span className="text-red-600">Node</span>
                 </h2>
-                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-2">
-                  Manual Asset Initialization
+                <p className="text-zinc-500 text-[9px] font-black uppercase tracking-widest mt-1">
+                  Database Write Authorization Required
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => setIsCreating(false)}
-                className="p-4 bg-white/5 rounded-full hover:bg-white/10 text-zinc-500 transition-all">
+                onClick={closePortal}
+                className="p-3 text-zinc-500 hover:text-white">
                 <X size={20} />
               </button>
             </div>
 
-            <div className="space-y-8 mb-12">
-              <div className="group">
-                <label className="text-[9px] text-zinc-600 uppercase font-black mb-3 block px-1 group-focus-within:text-red-500 transition-colors">
-                  Node Identifier
+            <div className="space-y-6 mb-10">
+              <div className="space-y-2">
+                <label className="text-[9px] text-zinc-600 uppercase font-black px-1">
+                  Identifier
                 </label>
                 <input
                   required
-                  placeholder="e.g. MODEL S PERFORMANCE"
-                  className="w-full bg-white/[0.03] border border-white/5 rounded-2xl p-5 text-white outline-none focus:border-red-600 focus:bg-white/[0.05] transition-all font-bold tracking-tight uppercase"
+                  value={formData.name}
+                  placeholder="PLAN NAME"
+                  className="w-full bg-white/[0.03] border border-white/5 rounded-xl p-4 text-white outline-none focus:border-red-600 uppercase font-bold text-sm"
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="text-[9px] text-zinc-600 uppercase font-black mb-3 block px-1">
-                    Daily Return Percentage
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[9px] text-zinc-600 uppercase font-black px-1">
+                    ROI (%)
                   </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      step="0.1"
-                      required
-                      placeholder="0.00"
-                      className="w-full bg-white/[0.03] border border-white/5 rounded-2xl p-5 text-white outline-none focus:border-red-600 transition-all font-mono"
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          dailyReturn: e.target.value,
-                        })
-                      }
-                    />
-                    <span className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-600 font-bold">
-                      %
-                    </span>
-                  </div>
+                  <input
+                    type="number"
+                    step="0.1"
+                    required
+                    value={formData.dailyReturn}
+                    placeholder="2.5"
+                    className="w-full bg-white/[0.03] border border-white/5 rounded-xl p-4 text-white outline-none focus:border-red-600 font-mono"
+                    onChange={(e) =>
+                      setFormData({ ...formData, dailyReturn: e.target.value })
+                    }
+                  />
                 </div>
-                <div>
-                  <label className="text-[9px] text-zinc-600 uppercase font-black mb-3 block px-1">
-                    Cycle Duration (Days)
+                <div className="space-y-2">
+                  <label className="text-[9px] text-zinc-600 uppercase font-black px-1">
+                    Days
                   </label>
                   <input
                     type="number"
                     required
+                    value={formData.durationDays}
                     placeholder="30"
-                    className="w-full bg-white/[0.03] border border-white/5 rounded-2xl p-5 text-white outline-none focus:border-red-600 transition-all font-mono"
+                    className="w-full bg-white/[0.03] border border-white/5 rounded-xl p-4 text-white outline-none focus:border-red-600 font-mono"
                     onChange={(e) =>
                       setFormData({ ...formData, durationDays: e.target.value })
                     }
@@ -264,35 +270,31 @@ export default function AdminInvestments() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-[9px] text-zinc-600 uppercase font-black mb-3 block px-1">
-                  Threshold Entry Amount ($)
+              <div className="space-y-2">
+                <label className="text-[9px] text-zinc-600 uppercase font-black px-1">
+                  Min Entry ($)
                 </label>
-                <div className="relative">
-                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600 font-bold">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    required
-                    placeholder="0.00"
-                    className="w-full bg-white/[0.03] border border-white/5 rounded-2xl p-5 pl-10 text-white outline-none focus:border-red-600 transition-all font-mono"
-                    onChange={(e) =>
-                      setFormData({ ...formData, minAmount: e.target.value })
-                    }
-                  />
-                </div>
+                <input
+                  type="number"
+                  required
+                  value={formData.minAmount}
+                  placeholder="500"
+                  className="w-full bg-white/[0.03] border border-white/5 rounded-xl p-4 text-white outline-none focus:border-red-600 font-mono"
+                  onChange={(e) =>
+                    setFormData({ ...formData, minAmount: e.target.value })
+                  }
+                />
               </div>
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-6 bg-red-600 text-white rounded-3xl font-black uppercase text-[12px] tracking-[0.3em] hover:bg-red-700 transition-all flex items-center justify-center gap-3 shadow-2xl disabled:opacity-50">
+              className="w-full py-5 bg-red-600 text-white rounded-2xl font-black uppercase text-[11px] tracking-[0.3em] hover:bg-red-500 disabled:opacity-50 flex items-center justify-center gap-3 transition-all">
               {isSubmitting ? (
-                <Loader2 className="animate-spin" size={20} />
+                <Loader2 className="animate-spin" size={16} />
               ) : (
-                "Authorize Deployment"
+                "Finalize Changes"
               )}
             </button>
           </form>

@@ -16,6 +16,57 @@ export async function GET() {
   }
 }
 
+export async function DELETE(request: Request) {
+  try {
+    await connectToDatabase();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "ID required" },
+        { status: 400 },
+      );
+    }
+
+    await InvestmentPlan.findByIdAndDelete(id);
+    return NextResponse.json({ success: true, message: "Node Decommissioned" });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: "Deletion Failed" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    await connectToDatabase();
+    const body = await request.json();
+    const { id, ...updateData } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Plan ID required" },
+        { status: 400 },
+      );
+    }
+
+    const updatedPlan = await InvestmentPlan.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true }, // Returns the modified document
+    );
+
+    return NextResponse.json({ success: true, plan: updatedPlan });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: "Update Failed" },
+      { status: 500 },
+    );
+  }
+}
+
 // CREATE A NEW PLAN
 export async function POST(request: Request) {
   try {
