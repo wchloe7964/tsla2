@@ -1,7 +1,7 @@
 // app/api/stocks/route.ts
 import { NextResponse } from "next/server";
 
-const FINNHUB_KEY = process.env.FINNHUB_API_KEY; // Get from finnhub.io
+const FINNHUB_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY; // Get from finnhub.io
 const SYMBOLS = ["TSLA", "AAPL", "NVDA", "MSFT", "AMZN"];
 
 export async function GET() {

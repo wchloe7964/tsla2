@@ -9,7 +9,6 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // We use hsl() because your CSS variables are raw HSL values
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         tesla: {
@@ -18,15 +17,25 @@ const config: Config = {
           gray: {
             900: "#171a20",
             100: "#f4f4f4",
-          }
-        }
+          },
+        },
       },
       fontFamily: {
-        // This allows you to use 'font-tesla' in your components
-        tesla: ['Tesla', 'sans-serif'],
+        tesla: ["Tesla", "sans-serif"],
+      },
+      // --- ADDED ANIMATIONS FOR STOCK TICKER ---
+      animation: {
+        marquee: "marquee 30s linear infinite",
+      },
+      keyframes: {
+        marquee: {
+          "0%": { transform: "translateX(0%)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
       },
     },
   },
   plugins: [],
 };
+
 export default config;

@@ -1,47 +1,44 @@
-import mongoose from 'mongoose'
+// lib/models/Stock.js
+import mongoose from "mongoose";
 
-const StockSchema = new mongoose.Schema({
-  symbol: {
-    type: String,
-    required: true,
-    unique: true,
-    uppercase: true
+const StockSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    symbol: {
+      type: String,
+      required: true,
+      uppercase: true,
+      trim: true,
+    },
+    shares: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+    entryPrice: {
+      type: Number,
+      required: true,
+      min: 0.01,
+    },
+    allocatedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  name: {
-    type: String,
-    required: true
+  {
+    timestamps: true,
   },
-  price: {
-    type: Number,
-    required: true
-  },
-  change: {
-    type: Number,
-    default: 0
-  },
-  changePercent: {
-    type: Number,
-    default: 0
-  },
-  volume: {
-    type: Number,
-    default: 0
-  },
-  marketCap: Number,
-  description: String,
-  sector: String,
-  industry: String,
-  logo: String,
-  historicalData: [{
-    date: Date,
-    open: Number,
-    high: Number,
-    low: Number,
-    close: Number,
-    volume: Number
-  }]
-}, {
-  timestamps: true
-})
+);
 
-export default mongoose.models.Stock || mongoose.model('Stock', StockSchema)
+// Compound index to prevent duplicate allocations for same user and symbol
+StockSchema.index({ userId: 1, symbol: 1 }, { unique: true });
+
+export default mongoose.models.Stock || mongoose.model("Stock", StockSchema);

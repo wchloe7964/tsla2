@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db/mongodb";
 import User from "@/lib/models/User";
+// Import the Stock model so we can calculate the real-time sum if needed
+import Stock from "@/lib/models/Stock";
 import { verifyToken, generateToken } from "@/lib/utils/auth";
 
 export async function GET(request: NextRequest) {
@@ -10,24 +12,21 @@ export async function GET(request: NextRequest) {
     if (!token) {
       return NextResponse.json(
         { success: false, error: "No session" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
-    // 1. Verify Token (using your existing util)
     const payload = await verifyToken(token);
-
     if (!payload || !payload.userId) {
       return NextResponse.json(
         { success: false, error: "Invalid Session" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
-    // 2. Database Connection
     await connectDB();
 
-    // 3. Fetch User
+    // 1. Fetch User (excluding the heavy nested arrays now handled by Stock.ts)
     const user = await User.findById(payload.userId)
       .select("-password +twoFactorSecret")
       .lean();
@@ -35,13 +34,21 @@ export async function GET(request: NextRequest) {
     if (!user) {
       const response = NextResponse.json(
         { success: false, error: "User not found" },
-        { status: 404 }
+        { status: 404 },
       );
       response.cookies.delete("auth-token");
       return response;
     }
 
-    // 4. Construct response using correct nested mapping
+    // 2. Fetch User's Stocks separately to calculate total value
+    // This keeps the User object light while still providing basic stats to the header/nav
+    const userStocks = await Stock.find({ userId: user._id }).lean();
+    const portfolioValue = userStocks.reduce(
+      (sum, s) => sum + s.shares * s.entryPrice,
+      0,
+    );
+
+    // 3. Construct response
     const responseBody = {
       success: true,
       user: {
@@ -49,23 +56,18 @@ export async function GET(request: NextRequest) {
         email: user.email,
         name: user.name,
         role: user.role,
-        // Mapping from your Wallet and Portfolio sub-documents
         balance: user.wallet?.balance || 0,
-        portfolioValue: user.portfolio?.totalValue || 0,
-        totalProfitLoss: user.portfolio?.totalProfitLoss || 0,
-        wallet: user.wallet || {},
-        portfolio: user.portfolio || {},
-        preferences: user.preferences || {},
+        // Using the calculated value from our separate Stock model
+        portfolioValue: portfolioValue,
         kycLevel: user.kycLevel || "LEVEL_1",
-        kycData: user.kycData || {},
         twoFactorEnabled: !!user.twoFactorEnabled,
+        preferences: user.preferences || {},
       },
     };
 
     const response = NextResponse.json(responseBody);
 
-    // 5. Refresh JWT (Sliding Session)
-    // FIXED: Use the 'user' object AFTER it's fetched from DB
+    // 4. Refresh JWT (Sliding Session)
     const refreshedToken = await generateToken(user._id.toString(), user.role);
 
     response.cookies.set({
@@ -81,14 +83,12 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error: any) {
     console.error("Session validation error:", error.message);
-
     const errorResponse = NextResponse.json(
       { success: false, error: "Unauthorized" },
-      { status: 401 }
+      { status: 401 },
     );
 
-    // Clear cookie if token is dead
-    if (error.code === "ERR_JWT_EXPIRED" || error.code === "ERR_JWS_INVALID") {
+    if (error.code === "ERR_JWT_EXPIRED" || error.name === "JWTExpired") {
       errorResponse.cookies.delete("auth-token");
     }
 

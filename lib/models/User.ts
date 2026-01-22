@@ -24,7 +24,7 @@ export interface IUser extends Document {
 // Interface for Static Methods
 interface IUserModel extends Model<IUser> {
   findByEmailWithPassword: (
-    email: string
+    email: string,
   ) => mongoose.Query<IUser | null, IUser>;
 }
 
@@ -162,7 +162,7 @@ const UserSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 // --- HOOKS ---
@@ -199,7 +199,7 @@ UserSchema.methods.runPortfolioCalcs = function () {
   p.totalCost = p.stocks.reduce((sum: number, s: any) => sum + s.totalCost, 0);
   p.totalValue = p.stocks.reduce(
     (sum: number, s: any) => sum + s.currentValue,
-    0
+    0,
   );
   p.totalProfitLoss = p.totalValue - p.totalCost;
 };
@@ -207,7 +207,7 @@ UserSchema.methods.runPortfolioCalcs = function () {
 // --- STATIC METHODS ---
 UserSchema.statics.findByEmailWithPassword = function (email: string) {
   return this.findOne({ email: email.toLowerCase() }).select(
-    "+password +twoFactorSecret +recoveryKeys"
+    "+password +twoFactorSecret +recoveryKeys",
   );
 };
 
@@ -215,4 +215,5 @@ UserSchema.index({ "wallet.balance": -1 });
 
 const User =
   mongoose.models.User || mongoose.model<IUser, IUserModel>("User", UserSchema);
-export default User;
+export { User }; // Named export
+export default User; // Default export
