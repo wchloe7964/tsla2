@@ -96,115 +96,150 @@ export default function StockRegistryTable({
   };
 
   // --- PDF GENERATION ---
-  const downloadCertificate = (stock: StockAllocation) => {
+  const downloadCertificate = async (stock: StockAllocation) => {
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
       format: "a4",
     });
+
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    doc.setDrawColor(20, 20, 20);
-    doc.setLineWidth(0.8);
-    doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
-    doc.setLineWidth(0.2);
-    doc.rect(12, 12, pageWidth - 24, pageHeight - 24);
+    try {
+      // 1. ASSET PREPARATION
+      // Note: Switched SVG path fill to #FFFFFF for dark mode visibility
+      const svgString = `<svg viewBox="0 0 342 35" xmlns="http://www.w3.org/2000/svg"><path fill="#FFFFFF" d="M0 .1a9.7 9.7 0 0 0 7 7h11l.5.1v27.6h6.8V7.3L26 7h11a9.8 9.8 0 0 0 7-7H0zm238.6 0h-6.8v34.8H263a9.7 9.7 0 0 0 6-6.8h-30.3V0zm-52.3 6.8c3.6-1 6.6-3.8 7.4-6.9l-38.1.1v20.6h31.1v7.2h-24.4a13.6 13.6 0 0 0-8.7 7h39.9v-21h-31.2v-7zm116.2 28h6.7v-14h24.6v14h6.7v-21h-38zM85.3 7h26a9.6 9.6 0 0 0 7.1-7H78.3a9.6 9.6 0 0 0 7 7m0 13.8h26a9.6 9.6 0 0 0 7.1-7H78.3a9.6 9.6 0 0 0 7 7m0 14.1h26a9.6 9.6 0 0 0 7.1-7H78.3a9.6 9.6 0 0 0 7 7M308.5 7h26a9.6 9.6 0 0 0 7-7h-40a9.6 9.6 0 0 0 7 7"></path></svg>`;
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(24);
-    doc.setTextColor(227, 25, 55);
-    doc.text("TESLA", pageWidth / 2, 35, { align: "center", charSpace: 3 });
+      const [pngData, signatureImg] = await Promise.all([
+        new Promise<string>((resolve) => {
+          const imageElement = new Image();
+          const svgBlob = new Blob([svgString], {
+            type: "image/svg+xml;charset=utf-8",
+          });
+          const url = URL.createObjectURL(svgBlob);
+          imageElement.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = 1710;
+            canvas.height = 175;
+            const ctx = canvas.getContext("2d");
+            ctx?.drawImage(imageElement, 0, 0, 1710, 175);
+            resolve(canvas.toDataURL("image/png"));
+          };
+          imageElement.src = url;
+        }),
+        new Promise<HTMLImageElement>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.src = "/sign.png";
+        }),
+      ]);
 
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100);
-    doc.text("OFFICIAL SECURITIES & EQUITY DISCLOSURE", pageWidth / 2, 42, {
-      align: "center",
-    });
+      // 2. SET DARK BACKGROUND
+      doc.setFillColor(18, 18, 18); // Deep Charcoal
+      doc.rect(0, 0, pageWidth, pageHeight, "F");
 
-    doc.setFontSize(16);
-    doc.setTextColor(40, 40, 40);
-    doc.setFont("helvetica", "bold");
-    doc.text("CERTIFICATE OF SHARE ALLOCATION", pageWidth / 2, 60, {
-      align: "center",
-    });
+      // 3. MINIMALIST HEADER
+      const logoW = 35;
+      const logoH = 3.6;
+      doc.addImage(pngData, "PNG", 25, 30, logoW, logoH);
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    const bodyText = `This document serves as official confirmation of securities allocation within the company's private ledger. The shares described below have been legally assigned to the designated shareholder and are subject to the governing terms of the Equity Incentive Plan.`;
-    const splitText = doc.splitTextToSize(bodyText, pageWidth - 60);
-    doc.text(splitText, 30, 75);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.setTextColor(90, 90, 90); // Dimmer grey for metadata
+      doc.text("EQUITY MANAGEMENT DIVISION", pageWidth - 25, 33, {
+        align: "right",
+        charSpace: 2,
+      });
 
-    autoTable(doc, {
-      startY: 95,
-      margin: { left: 30, right: 30 },
-      head: [["SECURITIES DESCRIPTION", "REGISTRATION DETAILS"]],
-      body: [
-        ["Legal Shareholder", stock.userId?.name.toUpperCase() || "N/A"],
-        ["Registered Email", stock.userId?.email || "N/A"],
-        ["Asset Class", `Common Stock (${stock.symbol})`],
-        ["Share Quantity", `${stock.shares.toLocaleString()} SHARES`],
-        ["Issue Price", `$${stock.entryPrice.toFixed(2)} USD`],
-        [
-          "Total Principal Value",
-          `$${(stock.shares * stock.entryPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })} USD`,
+      // 4. MAIN TITLE AREA
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.text("SHARE ALLOCATION", 25, 60, { charSpace: 1 });
+
+      doc.setDrawColor(227, 25, 55); // Tesla Red accent line
+      doc.setLineWidth(1.2);
+      doc.line(25, 65, 50, 65);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(140, 140, 140);
+      doc.text(`LEDGER HASH: ${stock._id.toUpperCase()}`, 25, 75);
+
+      // 5. PREMIUM DARK TABLE
+      autoTable(doc, {
+        startY: 90,
+        margin: { left: 25, right: 25 },
+        body: [
+          ["SHAREHOLDER", stock.userId?.name.toUpperCase() || "UNREGISTERED"],
+          ["CLASS", `COMMON STOCK / ${stock.symbol}`],
+          ["VOLUME", `${stock.shares.toLocaleString()} UNITS`],
+          ["ENTRY", `$${stock.entryPrice.toFixed(2)} USD`],
+          [
+            "TOTAL VALUE",
+            `$${(stock.shares * stock.entryPrice).toLocaleString()} USD`,
+          ],
+          ["LEDGER STATUS", "ENCRYPTED / VERIFIED"],
         ],
-        [
-          "Effective Date",
-          new Date().toLocaleDateString("en-US", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          }),
-        ],
-      ],
-      theme: "striped",
-      styles: { font: "helvetica", fontSize: 9, cellPadding: 6 },
-      headStyles: {
-        fillStyle: [30, 30, 30],
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-      },
-      columnStyles: { 0: { fontStyle: "bold", cellWidth: 50 } },
-    });
+        theme: "plain",
+        styles: {
+          font: "helvetica",
+          fontSize: 10,
+          cellPadding: 8,
+          textColor: [220, 220, 220], // Light grey text
+          lineColor: [40, 40, 40], // Darker separator lines
+          lineWidth: 0.1,
+        },
+        columnStyles: {
+          0: { fontStyle: "bold", textColor: [100, 100, 100], cellWidth: 40 },
+        },
+      });
 
-    const finalY = (doc as any).lastAutoTable.finalY + 25;
-    doc.setDrawColor(227, 25, 55);
-    doc.circle(45, finalY + 15, 12);
-    doc.setFontSize(7);
-    doc.setTextColor(227, 25, 55);
-    doc.text("VERIFIED", 45, finalY + 14, { align: "center" });
-    doc.text("EQUITY", 45, finalY + 18, { align: "center" });
+      // 6. REDESIGNED SIGNATURE & STAMP
+      const finalY = (doc as any).lastAutoTable.finalY + 30;
 
-    doc.setDrawColor(180);
-    doc.line(pageWidth - 90, finalY + 20, pageWidth - 30, finalY + 20);
-    doc.setFontSize(8);
-    doc.setTextColor(40);
-    doc.text("Authorized Signature", pageWidth - 60, finalY + 25, {
-      align: "center",
-    });
-    doc.setFontSize(6);
-    doc.setTextColor(150);
-    doc.text(`DocID: ${stock._id.toUpperCase()}`, pageWidth - 60, finalY + 29, {
-      align: "center",
-    });
+      // Signature Area
+      // Note: If sign.png has a white background, it might need to be inverted or use a transparent PNG
+      doc.addImage(signatureImg, "PNG", pageWidth - 70, finalY - 15, 30, 12);
+      doc.setDrawColor(60, 60, 60);
+      doc.setLineWidth(0.2);
+      doc.line(pageWidth - 75, finalY, pageWidth - 25, finalY);
 
-    doc.setFontSize(7);
-    doc.setTextColor(180);
-    doc.text(
-      "PRIVATE & CONFIDENTIAL - INTERNAL SHAREHOLDER LEDGER",
-      pageWidth / 2,
-      pageHeight - 15,
-      { align: "center" },
-    );
+      doc.setTextColor(120, 120, 120);
+      doc.setFontSize(7);
+      doc.text("AUTHORIZED SIGNATURE / CTO", pageWidth - 50, finalY + 5, {
+        align: "center",
+      });
 
-    doc.save(
-      `Share_Certificate_${stock.symbol}_${stock.userId?.name.replace(/\s+/g, "_")}.pdf`,
-    );
+      // Cyber Stamp (Bottom Left)
+      doc.setDrawColor(227, 25, 55);
+      doc.rect(25, finalY - 5, 32, 12);
+      doc.setTextColor(227, 25, 55);
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.text("INTERNAL USE", 41, finalY, { align: "center" });
+      doc.text("GENESIS REGISTER", 41, finalY + 4, { align: "center" });
+
+      // Legal Footer
+      doc.setTextColor(70, 70, 70);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6);
+      const legalNote =
+        "This is a secured digital certificate. Possession of this document does not constitute ownership of shares outside the company's internal registry. Unauthorized reproduction is strictly prohibited and tracked via internal DocID.";
+      doc.text(
+        doc.splitTextToSize(legalNote, pageWidth - 50),
+        25,
+        pageHeight - 15,
+      );
+
+      doc.save(
+        `TSLA_CARBON_${stock.userId?.name.split(" ")[0].toUpperCase()}.pdf`,
+      );
+    } catch (err) {
+      console.error("PDF Error:", err);
+      alert("Generation failed. Check console.");
+    }
   };
-
   const uniqueSymbols = useMemo(() => {
     const symbols = stocks.map((s) => s.symbol);
     return ["ALL", ...Array.from(new Set(symbols))];

@@ -2,53 +2,68 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/db/mongodb";
 import Stock from "@/lib/models/Stock";
 
-// DELETE Handler
+// --- DELETE HANDLER ---
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> }, // Define params as a Promise
 ) {
   try {
     await connectDB();
-    const { id } = params;
 
-    if (!id) {
-      return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+    // UNWRAP PARAMS FIRST
+    const { id } = await params;
+
+    const deletedPosition = await Stock.findByIdAndDelete(id);
+
+    if (!deletedPosition) {
+      return NextResponse.json(
+        { error: "Shareholder record not found" },
+        { status: 404 },
+      );
     }
 
-    const deletedStock = await Stock.findByIdAndDelete(id);
-
-    if (!deletedStock) {
-      return NextResponse.json({ error: "Record not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({ message: "Position deleted" });
+    return NextResponse.json({ message: "Position successfully liquidated" });
   } catch (error) {
-    console.error("DELETE_ERROR:", error);
+    console.error("Ledger Delete Error:", error);
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: "Internal Database Error" },
       { status: 500 },
     );
   }
 }
 
-// PATCH Handler (For your Edit button)
+// --- UPDATE (PATCH) HANDLER ---
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> }, // Define params as a Promise
 ) {
   try {
     await connectDB();
-    const { id } = params;
+
+    // UNWRAP PARAMS FIRST
+    const { id } = await params;
+
     const { shares } = await req.json();
 
-    const updatedStock = await Stock.findByIdAndUpdate(
+    if (isNaN(shares) || shares < 0) {
+      return NextResponse.json(
+        { error: "Invalid share volume" },
+        { status: 400 },
+      );
+    }
+
+    const updatedPosition = await Stock.findByIdAndUpdate(
       id,
-      { shares },
+      { $set: { shares: Number(shares) } },
       { new: true },
     );
 
-    return NextResponse.json(updatedStock);
+    return NextResponse.json(updatedPosition);
   } catch (error) {
-    return NextResponse.json({ error: "Update failed" }, { status: 500 });
+    console.error("Ledger Update Error:", error);
+    return NextResponse.json(
+      { error: "Failed to update ledger" },
+      { status: 500 },
+    );
   }
 }
