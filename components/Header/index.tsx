@@ -98,23 +98,27 @@ const Header = () => {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <div className="flex justify-between items-center">
             {/* Logo */}
-            <Link href="/" className="group flex items-center">
+            <Link
+              href="/"
+              className="group flex items-center min-w-0 flex-shrink-1">
               {logoError ? (
-                <div className="h-8 w-32 bg-gradient-to-r from-black to-gray-800 dark:from-white dark:to-gray-200 flex items-center justify-center rounded-lg">
-                  <span className="text-xs font-bold text-white dark:text-black tracking-widest">
+                <div className="h-7 w-24 sm:w-32 bg-gradient-to-r from-black to-gray-800 dark:from-white dark:to-gray-200 flex items-center justify-center rounded-lg">
+                  <span className="text-[10px] sm:text-xs font-bold text-white dark:text-black tracking-widest">
                     LOGO
                   </span>
                 </div>
               ) : (
-                <NextImage
-                  src={logoPath}
-                  alt="Logo"
-                  width={120}
-                  height={32}
-                  priority
-                  className="h-8 w-auto dark:invert transition-transform duration-500 group-hover:scale-105"
-                  onError={() => setLogoError(true)}
-                />
+                <div className="relative h-6 w-28 sm:h-8 sm:w-32">
+                  <NextImage
+                    src={logoPath}
+                    alt="Logo"
+                    fill // Uses absolute positioning relative to the parent div
+                    priority
+                    className="object-contain object-left dark:invert transition-transform duration-500 group-hover:scale-105"
+                    onError={() => setLogoError(true)}
+                    sizes="(max-width: 768px) 100px, 120px"
+                  />
+                </div>
               )}
             </Link>
 
