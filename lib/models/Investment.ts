@@ -1,9 +1,13 @@
-// lib/models/Investment.ts
 import mongoose from "mongoose";
 
 const InvestmentSchema = new mongoose.Schema(
   {
-    userId: { type: String, required: true },
+    // FIX: Add 'ref' to String type so .populate() can find the User
+    userId: {
+      type: String,
+      ref: "User",
+      required: true,
+    },
     planId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "InvestmentPlan",
@@ -13,17 +17,17 @@ const InvestmentSchema = new mongoose.Schema(
     dailyReturn: { type: Number, required: true },
     durationDays: { type: Number, required: true },
 
-    // 1. Ensure 'pending' is lowercase in the enum
     status: {
       type: String,
-      enum: ["pending", "active", "completed", "declined"],
+      enum: ["pending", "active", "completed", "declined", "stopped"],
       default: "pending",
     },
 
-    requestedAt: { type: Date, default: Date.now },
+    // Administrative Controls
+    isManuallyStopped: { type: Boolean, default: false },
+    customDurationSet: { type: Boolean, default: false },
 
-    // 2. REMOVE 'required: true' from these.
-    // They stay empty until the Admin approves the request.
+    requestedAt: { type: Date, default: Date.now },
     approvedAt: { type: Date },
     endDate: { type: Date },
   },

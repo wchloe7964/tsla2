@@ -23,7 +23,8 @@ import {
   Sliders,
   HardDrive,
   ChevronDown,
-  // Add any icons you need for children items
+  Cpu, // Representing Nodes/Deployments
+  Zap,
 } from "lucide-react";
 
 export const Sidebar = () => {
@@ -31,6 +32,7 @@ export const Sidebar = () => {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [kycCount, setKycCount] = useState(0);
+  const [pendingInvestments, setPendingInvestments] = useState(0);
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>(
     {},
   );
@@ -39,10 +41,14 @@ export const Sidebar = () => {
 
   useEffect(() => {
     if (isAdmin) {
+      // Fetch system-wide alerts for badges
       fetch("/api/admin/stats")
         .then((res) => res.json())
         .then((data) => {
-          if (data.success) setKycCount(data.stats.pendingKyc);
+          if (data.success) {
+            setKycCount(data.stats.pendingKyc);
+            setPendingInvestments(data.stats.pendingInvestments || 0);
+          }
         })
         .catch(() => {});
     }
@@ -58,17 +64,23 @@ export const Sidebar = () => {
     { href: "/admin/users", label: "Partners", icon: <Users size={18} /> },
   ];
 
-  // Section 2: Financials & Products
+  // Section 2: Financials & Nodes (The Core Business Logic)
   const businessLinks = [
+    {
+      href: "/admin/deployments",
+      label: "Active Nodes",
+      icon: <Cpu size={18} />,
+      badge: pendingInvestments > 0 ? pendingInvestments : null,
+    },
+    {
+      href: "/admin/investments",
+      label: "Plan Config",
+      icon: <HardDrive size={18} />,
+    },
     {
       href: "/admin/inventory",
       label: "Shop Inventory",
       icon: <Package size={18} />,
-    },
-    {
-      href: "/admin/investments",
-      label: "Investment Plans",
-      icon: <HardDrive size={18} />,
     },
     {
       href: "/admin/stocks",
@@ -95,7 +107,6 @@ export const Sidebar = () => {
       label: "System Alerts",
       icon: <Bell size={18} />,
     },
-    // Settings with children
     {
       href: "/admin/settings",
       label: "Settings",
@@ -156,7 +167,7 @@ export const Sidebar = () => {
           <Link
             href="/admin/dashboard"
             className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-lg bg-red-600 flex items-center justify-center text-white transition-transform group-hover:scale-105">
+            <div className="w-10 h-10 rounded-lg bg-red-600 flex items-center justify-center text-white transition-transform group-hover:scale-105 shadow-[0_0_20px_rgba(220,38,38,0.3)]">
               <span className="font-black italic text-xl">T</span>
             </div>
             <div>
@@ -181,7 +192,7 @@ export const Sidebar = () => {
             toggleExpand={toggleExpand}
           />
           <NavGroup
-            label="Commerce"
+            label="Node Control"
             links={businessLinks}
             pathname={pathname}
             setOpen={setIsMobileMenuOpen}
@@ -223,7 +234,7 @@ export const Sidebar = () => {
                 logout();
                 setIsMobileMenuOpen(false);
               }}
-              className="flex items-center gap-3 px-4 py-2 w-full text-zinc-600 hover:text-red-500 transition-all text-[9px] font-black uppercase tracking-widest italic">
+              className="flex items-center gap-3 px-4 py-2 w-full text-zinc-600 hover:text-red-500 transition-all text-[9px] font-black uppercase tracking-widest italic text-left">
               <LogOut size={14} /> Terminate Session
             </button>
           </div>
@@ -296,7 +307,6 @@ function NavGroup({
                     />
                   </button>
 
-                  {/* Children Links */}
                   {isExpanded && (
                     <div className="ml-8 mt-1 space-y-1">
                       {link.children.map((child: any) => {
@@ -325,7 +335,6 @@ function NavGroup({
                   )}
                 </>
               ) : (
-                // Regular link without children
                 <Link
                   href={link.href}
                   onClick={() => setOpen(false)}

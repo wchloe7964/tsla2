@@ -1,41 +1,34 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/db/mongodb";
 import Investment from "@/lib/models/Investment";
-import User from "@/lib/models/User";
+import User from "@/lib/models/User"; // Required for populate
+import InvestmentPlan from "@/lib/models/InvestmentPlan"; // Required for populate
 
 export async function GET() {
   try {
     await connectToDatabase();
 
-    // Fetch investments and populate user details (name/email)
-    const activeNodes = await Investment.find({ status: "active" })
-      .populate("userId", "name email")
-      .sort({ createdAt: -1 });
-
-    // Calculate total capital currently locked in nodes
-    const stats = await Investment.aggregate([
-      { $match: { status: "active" } },
-      {
-        $group: {
-          _id: null,
-          totalCapital: { $sum: "$amount" },
-          dailyLiability: {
-            $sum: {
-              $multiply: ["$amount", { $divide: ["$dailyReturn", 100] }],
-            },
-          },
-        },
-      },
-    ]);
+    // We must populate 'userId' to get the email
+    // and 'planId' to get the plan name
+    const investments = await Investment.find({})
+      .populate({
+        path: "userId",
+        select: "email", // Only grab the email for the card
+      })
+      .populate({
+        path: "planId",
+        select: "name dailyReturn durationDays",
+      })
+      .sort({ requestedAt: -1 });
 
     return NextResponse.json({
       success: true,
-      data: activeNodes,
-      summary: stats[0] || { totalCapital: 0, dailyLiability: 0 },
+      investments: investments || [],
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Fetch Error:", error);
     return NextResponse.json(
-      { success: false, error: "Sync Failed" },
+      { success: false, investments: [] },
       { status: 500 },
     );
   }
