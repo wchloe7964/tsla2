@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     if (!user)
       return NextResponse.json(
         { error: "Account sync failed" },
-        { status: 404 }
+        { status: 404 },
       );
 
     const investments = user.investments || [];
@@ -39,12 +39,12 @@ export async function GET(request: NextRequest) {
           totalInvested: investments.reduce(
             (acc: number, inv: any) =>
               acc + (inv.status === "active" ? inv.amount : 0),
-            0
+            0,
           ),
           totalReturns: investments.reduce(
             (acc: number, inv: any) =>
               acc + (inv.status === "active" ? inv.returns || 0 : 0),
-            0
+            0,
           ),
           balance: user.wallet?.balance || 0,
         },
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     if (!planType || !amount || amount < 100) {
       return NextResponse.json(
         { error: "The minimum to start is $100" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     if (user.wallet.balance < amount) {
       return NextResponse.json(
         { error: "You don't have enough cash in your wallet for this plan." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 

@@ -1,44 +1,35 @@
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
-const InvestmentSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  planType: {
-    type: String,
-    enum: ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'],
-    required: true
-  },
-  amount: {
-    type: Number,
-    required: true
-  },
-  returns: {
-    type: Number,
-    default: 0
-  },
-  status: {
-    type: String,
-    enum: ['active', 'completed', 'cancelled'],
-    default: 'active'
-  },
-  startDate: {
-    type: Date,
-    default: Date.now
-  },
-  endDate: Date,
-  transactions: [{
-    date: Date,
-    amount: Number,
-    type: {
+// This schema tracks individual user stakes in various plans
+const InvestmentSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    planType: {
       type: String,
-      enum: ['deposit', 'withdrawal', 'return']
-    }
-  }]
-}, {
-  timestamps: true
-})
+      required: true,
+      enum: ["Tesla", "Neural", "Cyber", "SpaceX"], // Matches your "Matrix" types
+    },
+    amount: {
+      type: Number,
+      required: true,
+    },
+    returns: {
+      type: Number,
+      default: 0,
+    },
+    status: {
+      type: String,
+      enum: ["active", "matured", "liquidated"],
+      default: "active",
+    },
+  },
+  { timestamps: true },
+);
 
-export default mongoose.models.Investment || mongoose.model('Investment', InvestmentSchema)
+// Prevents recompilation error in Next.js HMR
+export default mongoose.models.UserInvestment ||
+  mongoose.model("UserInvestment", InvestmentSchema);

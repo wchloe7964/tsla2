@@ -1,76 +1,56 @@
-import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/db/mongodb";
-import { verifyToken } from "@/lib/utils/auth";
-import InvestmentProduct from "@/lib/models/InvestmentProduct";
-import User from "@/lib/models/User";
+import { NextResponse } from "next/server";
+import connectToDatabase from "@/lib/db/mongodb"; // Assuming MongoDB
+import Investment from "@/lib/models/Investment"; // Your Schema
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const token = request.cookies.get("auth-token")?.value;
+    await connectToDatabase();
 
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const decoded = await verifyToken(token);
-
-    // Check for admin role
-    if (!decoded || decoded.role !== "admin") {
-      return NextResponse.json(
-        { error: "Admin access required" },
-        { status: 403 }
-      );
-    }
-
-    await connectDB();
-
+    // Aggregation for Stats
     const totalUsers = await User.countDocuments();
-    const allUsers = await User.find().select("investments email wallet");
+    const activePlans = await UserInvestment.find({ status: "active" });
+    const platformLiquidity = activePlans.reduce(
+      (acc, curr) => acc + curr.amount,
+      0,
+    );
 
-    const globalStats = {
-      totalUsers,
-      activeInvestmentsCount: allUsers.reduce(
-        (acc, u) =>
-          acc +
-          (u.investments?.filter((i: any) => i.status === "active").length ||
-            0),
-        0
-      ),
-      platformLiquidity: allUsers.reduce(
-        (acc, u) => acc + (u.wallet?.balance || 0),
-        0
-      ),
-    };
-
-    return NextResponse.json({ success: true, stats: globalStats });
+    return NextResponse.json({
+      success: true,
+      stats: {
+        totalUsers,
+        activeInvestmentsCount: activePlans.length,
+        platformLiquidity,
+      },
+    });
   } catch (error) {
     return NextResponse.json(
-      { error: "Failed to fetch admin stats" },
-      { status: 500 }
+      { success: false, error: "System Stat Failure" },
+      { status: 500 },
     );
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const token = request.cookies.get("auth-token")?.value;
-
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const decoded = await verifyToken(token);
-    if (!decoded || decoded.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    await connectDB();
+    await connectToDatabase();
     const body = await request.json();
 
-    const newProduct = await InvestmentProduct.create(body);
+    // Create the new investment "Node" available for users to buy
+    const newPlan = await Investment.create({
+      title: body.title,
+      description: body.description,
+      minAmount: body.minAmount,
+      roi: body.roi, // e.g., 15 for 15%
+      duration: body.duration, // in days
+      image: body.imageUrl, // URL from Cloudinary
+      planType: body.planType, // 'Tesla', 'Neural', etc.
+    });
 
-    return NextResponse.json({ success: true, product: newProduct });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ success: true, data: newPlan });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: "Deployment Failed" },
+      { status: 500 },
+    );
   }
 }

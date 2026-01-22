@@ -111,7 +111,9 @@ export default function AssignStockForm({ users }: { users: any[] }) {
     setValidationErrors({});
 
     try {
-      const apiKey = process.env.NEXT_PUBLIC_FINNHUB_API_KEY;
+      const apiKey =
+        process.env
+          .NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_FINNHUB_API_KEY;
       const res = await fetch(
         `https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`,
       );

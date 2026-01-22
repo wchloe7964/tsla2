@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const apiKey = process.env.NEXT_PUBLIC_FINNHUB_API_KEY;
+  const apiKey =
+    process.env
+      .NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_NEXT_PUBLIC_FINNHUB_API_KEY;
   const symbol = "TSLA"; // Using Tesla as your primary liquidity anchor
 
   try {

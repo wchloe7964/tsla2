@@ -23,11 +23,11 @@ export async function GET(request: NextRequest) {
     const activePlans = user.investments || [];
     const moneyInPlans = activePlans.reduce(
       (sum: number, inv: any) => sum + inv.amount,
-      0
+      0,
     );
     const totalEarnings = activePlans.reduce(
       (sum: number, inv: any) => sum + (inv.returns || 0),
-      0
+      0,
     );
 
     // Admin Overrides: Use the values you set in the Admin Panel
