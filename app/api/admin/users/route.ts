@@ -3,17 +3,18 @@ import connectDB from "@/lib/db/mongodb";
 import User from "@/lib/models/User";
 
 /**
- * GET: Fetch all users or search users with lightweight payload
+ * GET: Fetch users with Pagination, Search, and Cloudinary support
  */
 export async function GET(request: NextRequest) {
   try {
-    // 1. Establish robust connection
     await connectDB();
 
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const skip = (page - 1) * limit;
 
-    // 2. Build optimized filter
     let filter = {};
     if (query && query.trim() !== "") {
       filter = {
@@ -24,38 +25,23 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // 3. Execute Query with strict field selection
-    // Selecting only what the table needs prevents header/body bloat
+    // Include 'image' for Cloudinary avatars
     const users = await User.find(filter)
       .select(
-        "name email role balance investedAmount totalProfitLoss kycLevel createdAt",
+        "name email role balance investedAmount kycStatus image createdAt",
       )
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .lean();
 
-    // 4. Return standard success structure
-    return NextResponse.json(
-      {
-        success: true,
-        users: users || [],
-      },
-      {
-        status: 200,
-        headers: {
-          "Cache-Control": "no-store, max-age=0", // Prevent stale admin data
-        },
-      },
-    );
+    return NextResponse.json({
+      success: true,
+      users: users || [],
+    });
   } catch (error: any) {
-    console.error("CRITICAL_API_GET_ERROR:", error.message);
-
     return NextResponse.json(
-      {
-        success: false,
-        error: "Member directory synchronization failed",
-        details:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      },
+      { success: false, error: error.message },
       { status: 500 },
     );
   }
@@ -67,58 +53,89 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
+    const body = await request.json();
 
-    // Safety check for empty body
-    const body = await request.json().catch(() => null);
-
-    if (!body || !body.email || !body.name || !body.password) {
+    if (!body.email || !body.name) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Incomplete credentials: Name, Email, and Password required",
-        },
+        { success: false, error: "Missing required fields" },
         { status: 400 },
       );
     }
 
-    // Create user with sanitized numeric defaults
     const newUser = await User.create({
       ...body,
-      balance: Number(body.balance) || 0,
-      investedAmount: Number(body.investedAmount) || 0,
-      totalProfitLoss: Number(body.totalProfitLoss) || 0,
+      // Defaulting role to user if not specified to keep payload predictable
+      role: body.role || "user",
+      kycStatus: "pending",
     });
 
-    // Return user without password
-    const userResponse = newUser.toObject();
-    delete userResponse.password;
-
-    return NextResponse.json(
-      {
-        success: true,
-        user: userResponse,
-      },
-      { status: 201 },
-    );
+    return NextResponse.json({ success: true, user: newUser }, { status: 201 });
   } catch (error: any) {
-    console.error("CRITICAL_API_POST_ERROR:", error.message);
-
-    // Handle duplicate email error specifically
     if (error.code === 11000) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Identity conflict: Email already exists in infrastructure",
-        },
+        { success: false, error: "Email already exists" },
         { status: 409 },
       );
     }
-
     return NextResponse.json(
-      {
-        success: false,
-        error: error.message || "Manual entry failed",
-      },
+      { success: false, error: error.message },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * PATCH: Partial updates (KYC status, balance, etc.)
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    await connectDB();
+    const body = await request.json();
+    const { id, ...updateData } = body;
+
+    if (!id)
+      return NextResponse.json(
+        { success: false, error: "User ID required" },
+        { status: 400 },
+      );
+
+    const updatedUser = await User.findByIdAndUpdate(id, updateData, {
+      new: true,
+    }).lean();
+
+    return NextResponse.json({ success: true, user: updatedUser });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * DELETE: Remove user from infrastructure
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    await connectDB();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id)
+      return NextResponse.json(
+        { success: false, error: "User ID required" },
+        { status: 400 },
+      );
+
+    await User.findByIdAndDelete(id);
+
+    return NextResponse.json({
+      success: true,
+      message: "User purged from system",
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message },
       { status: 500 },
     );
   }
