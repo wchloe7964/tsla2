@@ -11,6 +11,8 @@ import {
   Settings,
   TrendingUp,
   Zap,
+  BarChart3,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function AdminInvestments() {
@@ -97,10 +99,22 @@ export default function AdminInvestments() {
     }
   };
 
+  // Stats Calculation
+  const avgROI = plans.length
+    ? (
+        plans.reduce((acc: any, p: any) => acc + p.dailyReturn, 0) /
+        plans.length
+      ).toFixed(2)
+    : 0;
+  const totalMinEntry = plans.reduce(
+    (acc: any, p: any) => acc + p.minAmount,
+    0,
+  );
+
   return (
     <div className="p-6 md:p-10 bg-[#050505] min-h-screen text-white selection:bg-red-500/30">
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6 pt-10">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6 pt-10">
         <div>
           <div className="flex items-center gap-3 mb-4">
             <span className="relative flex h-2 w-2">
@@ -112,9 +126,9 @@ export default function AdminInvestments() {
             </h2>
           </div>
           <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter uppercase leading-none">
-            Growth{" "}
+            Tesla{" "}
             <span className="text-zinc-900 drop-shadow-[0_0_1px_rgba(255,255,255,0.1)]">
-              Nodes
+              Investment
             </span>
           </h1>
         </div>
@@ -124,6 +138,50 @@ export default function AdminInvestments() {
           className="group px-8 py-4 bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] rounded-full hover:bg-red-600 hover:text-white transition-all duration-500 flex items-center gap-2">
           <Plus size={16} strokeWidth={3} /> Add New Plan
         </button>
+      </div>
+
+      {/* GLOBAL ANALYTICS CARD */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
+        <div className="bg-white/[0.02] border border-white/5 p-6 rounded-[2rem]">
+          <p className="text-zinc-600 text-[8px] font-black uppercase mb-2 tracking-widest">
+            Active Plans
+          </p>
+          <div className="flex items-center gap-3">
+            <BarChart3 size={18} className="text-red-600" />
+            <span className="text-2xl font-bold font-mono">{plans.length}</span>
+          </div>
+        </div>
+        <div className="bg-white/[0.02] border border-white/5 p-6 rounded-[2rem]">
+          <p className="text-zinc-600 text-[8px] font-black uppercase mb-2 tracking-widest">
+            Avg Daily Yield
+          </p>
+          <div className="flex items-center gap-3">
+            <TrendingUp size={18} className="text-emerald-500" />
+            <span className="text-2xl font-bold font-mono">{avgROI}%</span>
+          </div>
+        </div>
+        <div className="bg-white/[0.02] border border-white/5 p-6 rounded-[2rem]">
+          <p className="text-zinc-600 text-[8px] font-black uppercase mb-2 tracking-widest">
+            Cumulative Entry
+          </p>
+          <div className="flex items-center gap-3">
+            <Zap size={18} className="text-amber-500" />
+            <span className="text-2xl font-bold font-mono">
+              ${totalMinEntry.toLocaleString()}
+            </span>
+          </div>
+        </div>
+        <div className="bg-white/[0.02] border border-white/5 p-6 rounded-[2rem]">
+          <p className="text-zinc-600 text-[8px] font-black uppercase mb-2 tracking-widest">
+            Protocol Status
+          </p>
+          <div className="flex items-center gap-3">
+            <ShieldCheck size={18} className="text-blue-500" />
+            <span className="text-[10px] font-black uppercase text-blue-500">
+              Encrypted
+            </span>
+          </div>
+        </div>
       </div>
 
       {loading ? (
